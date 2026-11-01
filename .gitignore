@@ -1,0 +1,13 @@
+# Builds e ficheiros de lock do Studio
+*.rbxl.lock
+*.rbxlx.lock
+build/
+sourcemap.json
+
+# GUI icon pack: licensed for use in the game only, never redistribute
+assets/ui-icons/
+assets/ui-upload/
+design/map-v2/*.glb
+design/map-v2/*.fbx
+design/pets/glb/
+__pycache__/

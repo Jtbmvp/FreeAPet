@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <defs>
+    <radialGradient id="core" cx="0.42" cy="0.38" r="0.7">
+      <stop offset="0" stop-color="#fff59a"/>
+      <stop offset="0.45" stop-color="#ffd23a"/>
+      <stop offset="1" stop-color="#ff9a12"/>
+    </radialGradient>
+    <linearGradient id="ray" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffc63a"/>
+      <stop offset="1" stop-color="#ff7a14"/>
+    </linearGradient>
+  </defs>
+  <g transform="translate(256 256) scale(0.84) translate(-256 -256)">
+  <g stroke="#6e2f04" stroke-width="16" stroke-linejoin="round">
+    <g id="rays" fill="url(#ray)">
+      <path d="M256 34 C266 34 270 40 274 48 L306 116 L206 116 L238 48 C242 40 246 34 256 34 Z"/>
+      <path d="M256 34 C266 34 270 40 274 48 L306 116 L206 116 L238 48 C242 40 246 34 256 34 Z" transform="rotate(45 256 256)"/>
+      <path d="M256 34 C266 34 270 40 274 48 L306 116 L206 116 L238 48 C242 40 246 34 256 34 Z" transform="rotate(90 256 256)"/>
+      <path d="M256 34 C266 34 270 40 274 48 L306 116 L206 116 L238 48 C242 40 246 34 256 34 Z" transform="rotate(135 256 256)"/>
+      <path d="M256 34 C266 34 270 40 274 48 L306 116 L206 116 L238 48 C242 40 246 34 256 34 Z" transform="rotate(180 256 256)"/>
+      <path d="M256 34 C266 34 270 40 274 48 L306 116 L206 116 L238 48 C242 40 246 34 256 34 Z" transform="rotate(225 256 256)"/>
+      <path d="M256 34 C266 34 270 40 274 48 L306 116 L206 116 L238 48 C242 40 246 34 256 34 Z" transform="rotate(270 256 256)"/>
+      <path d="M256 34 C266 34 270 40 274 48 L306 116 L206 116 L238 48 C242 40 246 34 256 34 Z" transform="rotate(315 256 256)"/>
+    </g>
+    <circle cx="256" cy="256" r="138" fill="url(#core)"/>
+  </g>
+  <circle cx="256" cy="256" r="112" fill="none" stroke="#ffb020" stroke-width="10" opacity="0.55"/>
+  <ellipse cx="205" cy="190" rx="52" ry="30" fill="#ffffff" opacity="0.85" transform="rotate(-35 205 190)"/>
+  <circle cx="262" cy="160" r="11" fill="#ffffff" opacity="0.9"/>
+  </g>
+</svg>

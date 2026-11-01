@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <defs>
+    <radialGradient id="glow" cx="0.5" cy="0.55" r="0.6">
+      <stop offset="0" stop-color="#fffbd0"/>
+      <stop offset="0.4" stop-color="#ffd84a"/>
+      <stop offset="1" stop-color="#ff9a1a"/>
+    </radialGradient>
+    <linearGradient id="metal" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#5b6b8c"/>
+      <stop offset="1" stop-color="#2e3a55"/>
+    </linearGradient>
+    <linearGradient id="gold" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffd34d"/>
+      <stop offset="1" stop-color="#d98a12"/>
+    </linearGradient>
+    <radialGradient id="halo" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#ffe680" stop-opacity="0.75"/>
+      <stop offset="1" stop-color="#ffe680" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <g transform="translate(256 256) scale(0.84) translate(-256 -256)">
+  <circle cx="256" cy="300" r="210" fill="url(#halo)"/>
+  <g stroke="#1b2236" stroke-width="16" stroke-linejoin="round" stroke-linecap="round">
+    <path d="M206 108 A50 50 0 0 1 306 108" fill="none" stroke-width="22"/>
+    <path d="M206 108 A50 50 0 0 1 306 108" fill="none" stroke="#5b6b8c" stroke-width="8"/>
+    <path d="M176 112 L336 112 L366 160 L146 160 Z" fill="url(#metal)"/>
+    <rect x="160" y="160" width="192" height="230" rx="18" fill="url(#glow)"/>
+    <path d="M222 160 L222 390 M290 160 L290 390" fill="none" stroke-width="14"/>
+    <path d="M222 160 L222 390 M290 160 L290 390" fill="none" stroke="url(#gold)" stroke-width="6"/>
+    <path d="M140 390 L372 390 L352 444 L160 444 Z" fill="url(#metal)"/>
+  </g>
+  <path d="M236 330 C214 300 236 270 256 246 C276 270 298 300 276 330 C268 344 244 344 236 330 Z" fill="#ff7a14" stroke="#8a3a06" stroke-width="8" stroke-linejoin="round"/>
+  <path d="M248 322 C240 306 250 290 256 280 C262 290 272 306 264 322 Z" fill="#fff3a0"/>
+  <ellipse cx="190" cy="215" rx="12" ry="40" fill="#ffffff" opacity="0.85"/>
+  <ellipse cx="212" cy="128" rx="26" ry="8" fill="#ffffff" opacity="0.5"/>
+  </g>
+</svg>

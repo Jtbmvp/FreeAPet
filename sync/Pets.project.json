@@ -1,0 +1,4 @@
+{
+  "name": "Animals",
+  "tree": { "$path": "../design/pets/FreeAPetPets.rbxmx" }
+}
