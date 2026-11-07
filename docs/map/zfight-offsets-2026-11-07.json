@@ -1,0 +1,1818 @@
+{
+ "task": "z-fighting chao (island_underside coplanar overlaps)",
+ "date": "2026-11-07",
+ "author": "Gaia",
+ "place": "Free a Pet! (placeId 109653985388163)",
+ "mapVersion": "V3",
+ "method": "Overlapping coplanar island_underside_01 pieces (top Y=0) assigned to layers by greedy graph colouring; each layer 0.1 stud lower. Only downward moves; highest top stays Y=0. Paths/bridges, spawns and markers untouched. For different-colour pairs the piece visible from above before the fix stays on top.",
+ "notes": [
+  "childIndex = 1-based index of the island_underside model in Workspace.Map.Collision.underside:GetChildren() order at the time of the fix; use matchPositionXZ + orientationY to match pieces in the source JSON.",
+  "Rows only for changed pieces (138 of the 218 top-level *_01 pieces; the 218 *_02 pieces were not touched).",
+  "Backup in place: ServerStorage.GaiaZFightBackup_20261107 (218 models / 436 MeshParts, original CFrames, attribute GaiaZF_Index). Each changed part has attribute GaiaZF_DeltaY."
+ ],
+ "stats": {
+  "piecesTop0": 218,
+  "overlapEdgesOBB": 289,
+  "diffColourPairsOBB": 8,
+  "bridgeOverlaps": 3,
+  "changed": 138,
+  "maxDrop": 0.3,
+  "minGapAfter": 0.1
+ },
+ "parts": [
+  {
+   "path": "Workspace.Map.Collision.underside[2].island_underside_01_Plastic",
+   "childIndex": 2,
+   "name": "island_underside_01_Plastic",
+   "matchPositionXZ": [
+    -186.27,
+    -198.39
+   ],
+   "orientationY": -134,
+   "topYOriginal": 0,
+   "topYNew": -0.1,
+   "deltaY": -0.1
+  },
+  {
+   "path": "Workspace.Map.Collision.underside[3].island_underside_01_Plastic",
+   "childIndex": 3,
+   "name": "island_underside_01_Plastic",
+   "matchPositionXZ": [
+    -175.42,
+    -203.31
+   ],
+   "orientationY": -180,
+   "topYOriginal": 0,
+   "topYNew": -0.2,
+   "deltaY": -0.2
+  },
+  {
+   "path": "Workspace.Map.Collision.underside[5].island_underside_01_Plastic",
+   "childIndex": 5,
+   "name": "island_underside_01_Plastic",
+   "matchPositionXZ": [
+    -130.19,
+    -203.15
+   ],
+   "orientationY": -88,
+   "topYOriginal": 0,
+   "topYNew": -0.1,
+   "deltaY": -0.1
+  },
+  {
+   "path": "Workspace.Map.Collision.underside[7].island_underside_01_Plastic",
+   "childIndex": 7,
+   "name": "island_underside_01_Plastic",
+   "matchPositionXZ": [
+    -86.45,
+    -204.75
+   ],
+   "orientationY": 4,
+   "topYOriginal": 0,
+   "topYNew": -0.1,
+   "deltaY": -0.1
+  },
+  {
+   "path": "Workspace.Map.Collision.underside[9].island_underside_01_Plastic",
+   "childIndex": 9,
+   "name": "island_underside_01_Plastic",
+   "matchPositionXZ": [
+    -44.42,
+    -204.79
+   ],
+   "orientationY": 96,
+   "topYOriginal": 0,
+   "topYNew": -0.1,
+   "deltaY": -0.1
+  },
+  {
+   "path": "Workspace.Map.Collision.underside[11].island_underside_01_Plastic",
+   "childIndex": 11,
+   "name": "island_underside_01_Plastic",
+   "matchPositionXZ": [
+    -0.77,
+    -203.2
+   ],
+   "orientationY": -172,
+   "topYOriginal": 0,
+   "topYNew": -0.2,
+   "deltaY": -0.2
+  },
+  {
+   "path": "Workspace.Map.Collision.underside[12].island_underside_01_Plastic",
+   "childIndex": 12,
+   "name": "island_underside_01_Plastic",
+   "matchPositionXZ": [
+    21.87,
+    -202.89
+   ],
+   "orientationY": -126,
+   "topYOriginal": 0,
+   "topYNew": -0.1,
+   "deltaY": -0.1
+  },
+  {
+   "path": "Workspace.Map.Collision.underside[14].island_underside_01_Plastic",
+   "childIndex": 14,
+   "name": "island_underside_01_Plastic",
+   "matchPositionXZ": [
+    66.56,
+    -204.09
+   ],
+   "orientationY": -34,
+   "topYOriginal": 0,
+   "topYNew": -0.1,
+   "deltaY": -0.1
+  },
+  {
+   "path": "Workspace.Map.Collision.underside[16].island_underside_01_Plastic",
+   "childIndex": 16,
+   "name": "island_underside_01_Plastic",
+   "matchPositionXZ": [
+    108.97,
+    -205.1
+   ],
+   "orientationY": 58,
+   "topYOriginal": 0,
+   "topYNew": -0.1,
+   "deltaY": -0.1
+  },
+  {
+   "path": "Workspace.Map.Collision.underside[17].island_underside_01_Plastic",
+   "childIndex": 17,
+   "name": "island_underside_01_Plastic",
+   "matchPositionXZ": [
+    130.03,
+    -204.68
+   ],
+   "orientationY": 104,
+   "topYOriginal": 0,
+   "topYNew": -0.2,
+   "deltaY": -0.2
+  },
+  {
+   "path": "Workspace.Map.Collision.underside[19].island_underside_01_Plastic",
+   "childIndex": 19,
+   "name": "island_underside_01_Plastic",
+   "matchPositionXZ": [
+    173.9,
+    -203.1
+   ],
+   "orientationY": -164,
+   "topYOriginal": 0,
+   "topYNew": -0.2,
+   "deltaY": -0.2
+  },
+  {
+   "path": "Workspace.Map.Collision.underside[20].island_underside_01_Plastic",
+   "childIndex": 20,
+   "name": "island_underside_01_Plastic",
+   "matchPositionXZ": [
+    185.29,
+    -198.81
+   ],
+   "orientationY": -180,
+   "topYOriginal": 0,
+   "topYNew": -0.1,
+   "deltaY": -0.1
+  },
+  {
+   "path": "Workspace.Map.Collision.underside[22].island_underside_01_Plastic",
+   "childIndex": 22,
+   "name": "island_underside_01_Plastic",
+   "matchPositionXZ": [
+    203.13,
+    -173.86
+   ],
+   "orientationY": -180,
+   "topYOriginal": 0,
+   "topYNew": -0.2,
+   "deltaY": -0.2
+  },
+  {
+   "path": "Workspace.Map.Collision.underside[23].island_underside_01_Plastic",
+   "childIndex": 23,
+   "name": "island_underside_01_Plastic",
+   "matchPositionXZ": [
+    203.89,
+    -151.62
+   ],
+   "orientationY": -134,
+   "topYOriginal": 0,
+   "topYNew": -0.1,
+   "deltaY": -0.1
+  },
+  {
+   "path": "Workspace.Map.Collision.underside[24].island_underside_01_Plastic",
+   "childIndex": 24,
+   "name": "island_underside_01_Plastic",
+   "matchPositionXZ": [
+    204.72,
+    -130.06
+   ],
+   "orientationY": -88,
+   "topYOriginal": 0,
+   "topYNew": -0.2,
+   "deltaY": -0.2
+  },
+  {
+   "path": "Workspace.Map.Collision.underside[26].island_underside_01_Plastic",
+   "childIndex": 26,
+   "name": "island_underside_01_Plastic",
+   "matchPositionXZ": [
+    204.82,
+    -88.02
+   ],
+   "orientationY": 4,
+   "topYOriginal": 0,
+   "topYNew": -0.1,
+   "deltaY": -0.1
+  },
+  {
+   "path": "Workspace.Map.Collision.underside[28].island_underside_01_Plastic",
+   "childIndex": 28,
+   "name": "island_underside_01_Plastic",
+   "matchPositionXZ": [
+    203.22,
+    -44.43
+   ],
+   "orientationY": 96,
+   "topYOriginal": 0,
+   "topYNew": -0.1,
+   "deltaY": -0.1
+  },
+  {
+   "path": "Workspace.Map.Collision.underside[29].island_underside_01_Plastic",
+   "childIndex": 29,
+   "name": "island_underside_01_Plastic",
+   "matchPositionXZ": [
+    202.89,
+    -21.81
+   ],
+   "orientationY": 142,
+   "topYOriginal": 0,
+   "topYNew": -0.2,
+   "deltaY": -0.2
+  },
+  {
+   "path": "Workspace.Map.Collision.underside[30].island_underside_01_Plastic",
+   "childIndex": 30,
+   "name": "island_underside_01_Plastic",
+   "matchPositionXZ": [
+    204.05,
+    22.93
+   ],
+   "orientationY": -126,
+   "topYOriginal": 0,
+   "topYNew": -0.1,
+   "deltaY": -0.1
+  },
+  {
+   "path": "Workspace.Map.Collision.underside[32].island_underside_01_Plastic",
+   "childIndex": 32,
+   "name": "island_underside_01_Plastic",
+   "matchPositionXZ": [
+    205.11,
+    65.36
+   ],
+   "orientationY": -34,
+   "topYOriginal": 0,
+   "topYNew": -0.2,
+   "deltaY": -0.2
+  },
+  {
+   "path": "Workspace.Map.Collision.underside[33].island_underside_01_Plastic",
+   "childIndex": 33,
+   "name": "island_underside_01_Plastic",
+   "matchPositionXZ": [
+    204.71,
+    86.41
+   ],
+   "orientationY": 12,
+   "topYOriginal": 0,
+   "topYNew": -0.1,
+   "deltaY": -0.1
+  },
+  {
+   "path": "Workspace.Map.Collision.underside[35].island_underside_01_Plastic",
+   "childIndex": 35,
+   "name": "island_underside_01_Plastic",
+   "matchPositionXZ": [
+    203.12,
+    130.23
+   ],
+   "orientationY": 104,
+   "topYOriginal": 0,
+   "topYNew": -0.1,
+   "deltaY": -0.1
+  },
+  {
+   "path": "Workspace.Map.Collision.underside[37].island_underside_01_Plastic",
+   "childIndex": 37,
+   "name": "island_underside_01_Plastic",
+   "matchPositionXZ": [
+    203.35,
+    175.45
+   ],
+   "orientationY": -164,
+   "topYOriginal": 0,
+   "topYNew": -0.2,
+   "deltaY": -0.2
+  },
+  {
+   "path": "Workspace.Map.Collision.underside[38].island_underside_01_Plastic",
+   "childIndex": 38,
+   "name": "island_underside_01_Plastic",
+   "matchPositionXZ": [
+    198.63,
+    186.85
+   ],
+   "orientationY": -180,
+   "topYOriginal": 0,
+   "topYNew": -0.1,
+   "deltaY": -0.1
+  },
+  {
+   "path": "Workspace.Map.Collision.underside[40].island_underside_01_Plastic",
+   "childIndex": 40,
+   "name": "island_underside_01_Plastic",
+   "matchPositionXZ": [
+    173.68,
+    204.69
+   ],
+   "orientationY": -180,
+   "topYOriginal": 0,
+   "topYNew": -0.2,
+   "deltaY": -0.2
+  },
+  {
+   "path": "Workspace.Map.Collision.underside[41].island_underside_01_Plastic",
+   "childIndex": 41,
+   "name": "island_underside_01_Plastic",
+   "matchPositionXZ": [
+    152.62,
+    205.11
+   ],
+   "orientationY": -134,
+   "topYOriginal": 0,
+   "topYNew": -0.1,
+   "deltaY": -0.1
+  },
+  {
+   "path": "Workspace.Map.Collision.underside[43].island_underside_01_Plastic",
+   "childIndex": 43,
+   "name": "island_underside_01_Plastic",
+   "matchPositionXZ": [
+    110.2,
+    204.07
+   ],
+   "orientationY": -42,
+   "topYOriginal": 0,
+   "topYNew": -0.1,
+   "deltaY": -0.1
+  },
+  {
+   "path": "Workspace.Map.Collision.underside[45].island_underside_01_Plastic",
+   "childIndex": 45,
+   "name": "island_underside_01_Plastic",
+   "matchPositionXZ": [
+    65.48,
+    202.89
+   ],
+   "orientationY": 50,
+   "topYOriginal": 0,
+   "topYNew": -0.1,
+   "deltaY": -0.1
+  },
+  {
+   "path": "Workspace.Map.Collision.underside[47].island_underside_01_Plastic",
+   "childIndex": 47,
+   "name": "island_underside_01_Plastic",
+   "matchPositionXZ": [
+    20.71,
+    204.01
+   ],
+   "orientationY": 142,
+   "topYOriginal": 0,
+   "topYNew": -0.1,
+   "deltaY": -0.1
+  },
+  {
+   "path": "Workspace.Map.Collision.underside[49].island_underside_01_Plastic",
+   "childIndex": 49,
+   "name": "island_underside_01_Plastic",
+   "matchPositionXZ": [
+    -21.77,
+    205.11
+   ],
+   "orientationY": -126,
+   "topYOriginal": 0,
+   "topYNew": -0.1,
+   "deltaY": -0.1
+  },
+  {
+   "path": "Workspace.Map.Collision.underside[51].island_underside_01_Plastic",
+   "childIndex": 51,
+   "name": "island_underside_01_Plastic",
+   "matchPositionXZ": [
+    -64.34,
+    203.91
+   ],
+   "orientationY": -34,
+   "topYOriginal": 0,
+   "topYNew": -0.1,
+   "deltaY": -0.1
+  },
+  {
+   "path": "Workspace.Map.Collision.underside[53].island_underside_01_Plastic",
+   "childIndex": 53,
+   "name": "island_underside_01_Plastic",
+   "matchPositionXZ": [
+    -109.21,
+    202.9
+   ],
+   "orientationY": 58,
+   "topYOriginal": 0,
+   "topYNew": -0.1,
+   "deltaY": -0.1
+  },
+  {
+   "path": "Workspace.Map.Collision.underside[54].island_underside_01_Plastic",
+   "childIndex": 54,
+   "name": "island_underside_01_Plastic",
+   "matchPositionXZ": [
+    -131.79,
+    203.32
+   ],
+   "orientationY": 104,
+   "topYOriginal": 0,
+   "topYNew": -0.2,
+   "deltaY": -0.2
+  },
+  {
+   "path": "Workspace.Map.Collision.underside[56].island_underside_01_Plastic",
+   "childIndex": 56,
+   "name": "island_underside_01_Plastic",
+   "matchPositionXZ": [
+    -175.2,
+    204.9
+   ],
+   "orientationY": -164,
+   "topYOriginal": 0,
+   "topYNew": -0.2,
+   "deltaY": -0.2
+  },
+  {
+   "path": "Workspace.Map.Collision.underside[57].island_underside_01_Plastic",
+   "childIndex": 57,
+   "name": "island_underside_01_Plastic",
+   "matchPositionXZ": [
+    -187.03,
+    200.19
+   ],
+   "orientationY": -180,
+   "topYOriginal": 0,
+   "topYNew": -0.1,
+   "deltaY": -0.1
+  },
+  {
+   "path": "Workspace.Map.Collision.underside[59].island_underside_01_Plastic",
+   "childIndex": 59,
+   "name": "island_underside_01_Plastic",
+   "matchPositionXZ": [
+    -204.87,
+    175.24
+   ],
+   "orientationY": -180,
+   "topYOriginal": 0,
+   "topYNew": -0.2,
+   "deltaY": -0.2
+  },
+  {
+   "path": "Workspace.Map.Collision.underside[60].island_underside_01_Plastic",
+   "childIndex": 60,
+   "name": "island_underside_01_Plastic",
+   "matchPositionXZ": [
+    -204.11,
+    153.84
+   ],
+   "orientationY": -134,
+   "topYOriginal": 0,
+   "topYNew": -0.1,
+   "deltaY": -0.1
+  },
+  {
+   "path": "Workspace.Map.Collision.underside[61].island_underside_01_Plastic",
+   "childIndex": 61,
+   "name": "island_underside_01_Plastic",
+   "matchPositionXZ": [
+    -203.28,
+    131.76
+   ],
+   "orientationY": -88,
+   "topYOriginal": 0,
+   "topYNew": -0.2,
+   "deltaY": -0.2
+  },
+  {
+   "path": "Workspace.Map.Collision.underside[63].island_underside_01_Plastic",
+   "childIndex": 63,
+   "name": "island_underside_01_Plastic",
+   "matchPositionXZ": [
+    -203.18,
+    86.52
+   ],
+   "orientationY": 4,
+   "topYOriginal": 0,
+   "topYNew": -0.2,
+   "deltaY": -0.2
+  },
+  {
+   "path": "Workspace.Map.Collision.underside[64].island_underside_01_Plastic",
+   "childIndex": 64,
+   "name": "island_underside_01_Plastic",
+   "matchPositionXZ": [
+    -203.97,
+    64.34
+   ],
+   "orientationY": 50,
+   "topYOriginal": 0,
+   "topYNew": -0.1,
+   "deltaY": -0.1
+  },
+  {
+   "path": "Workspace.Map.Collision.underside[66].island_underside_01_Plastic",
+   "childIndex": 66,
+   "name": "island_underside_01_Plastic",
+   "matchPositionXZ": [
+    -205.11,
+    21.83
+   ],
+   "orientationY": 142,
+   "topYOriginal": 0,
+   "topYNew": -0.1,
+   "deltaY": -0.1
+  },
+  {
+   "path": "Workspace.Map.Collision.underside[68].island_underside_01_Plastic",
+   "childIndex": 68,
+   "name": "island_underside_01_Plastic",
+   "matchPositionXZ": [
+    -203.95,
+    -20.71
+   ],
+   "orientationY": -126,
+   "topYOriginal": 0,
+   "topYNew": -0.1,
+   "deltaY": -0.1
+  },
+  {
+   "path": "Workspace.Map.Collision.underside[70].island_underside_01_Plastic",
+   "childIndex": 70,
+   "name": "island_underside_01_Plastic",
+   "matchPositionXZ": [
+    -202.89,
+    -65.54
+   ],
+   "orientationY": -34,
+   "topYOriginal": 0,
+   "topYNew": -0.1,
+   "deltaY": -0.1
+  },
+  {
+   "path": "Workspace.Map.Collision.underside[72].island_underside_01_Plastic",
+   "childIndex": 72,
+   "name": "island_underside_01_Plastic",
+   "matchPositionXZ": [
+    -204.12,
+    -110.19
+   ],
+   "orientationY": 58,
+   "topYOriginal": 0,
+   "topYNew": -0.1,
+   "deltaY": -0.1
+  },
+  {
+   "path": "Workspace.Map.Collision.underside[74].island_underside_01_Plastic",
+   "childIndex": 74,
+   "name": "island_underside_01_Plastic",
+   "matchPositionXZ": [
+    -205.1,
+    -152.57
+   ],
+   "orientationY": 150,
+   "topYOriginal": 0,
+   "topYNew": -0.1,
+   "deltaY": -0.1
+  },
+  {
+   "path": "Workspace.Map.Collision.underside[75].island_underside_01_Plastic",
+   "childIndex": 75,
+   "name": "island_underside_01_Plastic",
+   "matchPositionXZ": [
+    -204.65,
+    -173.65
+   ],
+   "orientationY": -164,
+   "topYOriginal": 0,
+   "topYNew": -0.2,
+   "deltaY": -0.2
+  },
+  {
+   "path": "Workspace.Map.Collision.underside[77].island_underside_01_Plastic",
+   "childIndex": 77,
+   "name": "island_underside_01_Plastic",
+   "matchPositionXZ": [
+    270.75,
+    -173.98
+   ],
+   "orientationY": -134,
+   "topYOriginal": 0,
+   "topYNew": -0.2,
+   "deltaY": -0.2
+  },
+  {
+   "path": "Workspace.Map.Collision.underside[78].island_underside_01_Plastic",
+   "childIndex": 78,
+   "name": "island_underside_01_Plastic",
+   "matchPositionXZ": [
+    283.17,
+    -192.87
+   ],
+   "orientationY": -88,
+   "topYOriginal": 0,
+   "topYNew": -0.1,
+   "deltaY": -0.1
+  },
+  {
+   "path": "Workspace.Map.Collision.underside[80].island_underside_01_Plastic",
+   "childIndex": 80,
+   "name": "island_underside_01_Plastic",
+   "matchPositionXZ": [
+    303.18,
+    -219.09
+   ],
+   "orientationY": -180,
+   "topYOriginal": 0,
+   "topYNew": -0.2,
+   "deltaY": -0.2
+  },
+  {
+   "path": "Workspace.Map.Collision.underside[81].island_underside_01_Plastic",
+   "childIndex": 81,
+   "name": "island_underside_01_Plastic",
+   "matchPositionXZ": [
+    324.09,
+    -222.59
+   ],
+   "orientationY": -134,
+   "topYOriginal": 0,
+   "topYNew": -0.1,
+   "deltaY": -0.1
+  },
+  {
+   "path": "Workspace.Map.Collision.underside[82].island_underside_01_Plastic",
+   "childIndex": 82,
+   "name": "island_underside_01_Plastic",
+   "matchPositionXZ": [
+    345.08,
+    -226.91
+   ],
+   "orientationY": -88,
+   "topYOriginal": 0,
+   "topYNew": -0.2,
+   "deltaY": -0.2
+  },
+  {
+   "path": "Workspace.Map.Collision.underside[84].island_underside_01_Plastic",
+   "childIndex": 84,
+   "name": "island_underside_01_Plastic",
+   "matchPositionXZ": [
+    385.2,
+    -236.82
+   ],
+   "orientationY": 4,
+   "topYOriginal": 0,
+   "topYNew": -0.1,
+   "deltaY": -0.1
+  },
+  {
+   "path": "Workspace.Map.Collision.underside[85].island_underside_01_Plastic",
+   "childIndex": 85,
+   "name": "island_underside_01_Plastic",
+   "matchPositionXZ": [
+    404.75,
+    -237.7
+   ],
+   "orientationY": -180,
+   "topYOriginal": 0,
+   "topYNew": -0.2,
+   "deltaY": -0.2
+  },
+  {
+   "path": "Workspace.Map.Collision.underside[87].island_underside_01_Plastic",
+   "childIndex": 87,
+   "name": "island_underside_01_Plastic",
+   "matchPositionXZ": [
+    450.28,
+    -233.89
+   ],
+   "orientationY": -88,
+   "topYOriginal": 0,
+   "topYNew": -0.1,
+   "deltaY": -0.1
+  },
+  {
+   "path": "Workspace.Map.Collision.underside[89].island_underside_01_Plastic",
+   "childIndex": 89,
+   "name": "island_underside_01_Plastic",
+   "matchPositionXZ": [
+    514.92,
+    -230.77
+   ],
+   "orientationY": 50,
+   "topYOriginal": 0,
+   "topYNew": -0.2,
+   "deltaY": -0.2
+  },
+  {
+   "path": "Workspace.Map.Collision.underside[90].island_underside_01_Plastic",
+   "childIndex": 90,
+   "name": "island_underside_01_Plastic",
+   "matchPositionXZ": [
+    524.08,
+    -228.61
+   ],
+   "orientationY": -180,
+   "topYOriginal": 0,
+   "topYNew": -0.1,
+   "deltaY": -0.1
+  },
+  {
+   "path": "Workspace.Map.Collision.underside[92].island_underside_01_Plastic",
+   "childIndex": 92,
+   "name": "island_underside_01_Plastic",
+   "matchPositionXZ": [
+    569.62,
+    -232.07
+   ],
+   "orientationY": -88,
+   "topYOriginal": 0,
+   "topYNew": -0.2,
+   "deltaY": -0.2
+  },
+  {
+   "path": "Workspace.Map.Collision.underside[93].island_underside_01_Plastic",
+   "childIndex": 93,
+   "name": "island_underside_01_Plastic",
+   "matchPositionXZ": [
+    591.91,
+    -234.82
+   ],
+   "orientationY": -42,
+   "topYOriginal": 0,
+   "topYNew": -0.1,
+   "deltaY": -0.1
+  },
+  {
+   "path": "Workspace.Map.Collision.underside[94].island_underside_01_Plastic",
+   "childIndex": 94,
+   "name": "island_underside_01_Plastic",
+   "matchPositionXZ": [
+    613.38,
+    -237.61
+   ],
+   "orientationY": 4,
+   "topYOriginal": 0,
+   "topYNew": -0.2,
+   "deltaY": -0.2
+  },
+  {
+   "path": "Workspace.Map.Collision.underside[96].island_underside_01_Plastic",
+   "childIndex": 96,
+   "name": "island_underside_01_Plastic",
+   "matchPositionXZ": [
+    645.33,
+    -233.94
+   ],
+   "orientationY": -180,
+   "topYOriginal": 0,
+   "topYNew": -0.1,
+   "deltaY": -0.1
+  },
+  {
+   "path": "Workspace.Map.Collision.underside[97].island_underside_01_Plastic",
+   "childIndex": 97,
+   "name": "island_underside_01_Plastic",
+   "matchPositionXZ": [
+    661.24,
+    -220.44
+   ],
+   "orientationY": -134,
+   "topYOriginal": 0,
+   "topYNew": -0.2,
+   "deltaY": -0.2
+  },
+  {
+   "path": "Workspace.Map.Collision.underside[99].island_underside_01_Plastic",
+   "childIndex": 99,
+   "name": "island_underside_01_Plastic",
+   "matchPositionXZ": [
+    692.7,
+    -195.69
+   ],
+   "orientationY": -42,
+   "topYOriginal": 0,
+   "topYNew": -0.2,
+   "deltaY": -0.2
+  },
+  {
+   "path": "Workspace.Map.Collision.underside[100].island_underside_01_Plastic",
+   "childIndex": 100,
+   "name": "island_underside_01_Plastic",
+   "matchPositionXZ": [
+    707.35,
+    -183.67
+   ],
+   "orientationY": 4,
+   "topYOriginal": 0,
+   "topYNew": -0.1,
+   "deltaY": -0.1
+  },
+  {
+   "path": "Workspace.Map.Collision.underside[102].island_underside_01_Plastic",
+   "childIndex": 102,
+   "name": "island_underside_01_Plastic",
+   "matchPositionXZ": [
+    721.13,
+    -144.03
+   ],
+   "orientationY": -134,
+   "topYOriginal": 0,
+   "topYNew": -0.2,
+   "deltaY": -0.2
+  },
+  {
+   "path": "Workspace.Map.Collision.underside[103].island_underside_01_Plastic",
+   "childIndex": 103,
+   "name": "island_underside_01_Plastic",
+   "matchPositionXZ": [
+    723.93,
+    -124.35
+   ],
+   "orientationY": -88,
+   "topYOriginal": 0,
+   "topYNew": -0.1,
+   "deltaY": -0.1
+  },
+  {
+   "path": "Workspace.Map.Collision.underside[105].island_underside_01_Plastic",
+   "childIndex": 105,
+   "name": "island_underside_01_Plastic",
+   "matchPositionXZ": [
+    727.69,
+    -86.26
+   ],
+   "orientationY": 4,
+   "topYOriginal": 0,
+   "topYNew": -0.1,
+   "deltaY": -0.1
+  },
+  {
+   "path": "Workspace.Map.Collision.underside[106].island_underside_01_Plastic",
+   "childIndex": 106,
+   "name": "island_underside_01_Plastic",
+   "matchPositionXZ": [
+    728.57,
+    -66.69
+   ],
+   "orientationY": 50,
+   "topYOriginal": 0,
+   "topYNew": -0.2,
+   "deltaY": -0.2
+  },
+  {
+   "path": "Workspace.Map.Collision.underside[107].island_underside_01_Plastic",
+   "childIndex": 107,
+   "name": "island_underside_01_Plastic",
+   "matchPositionXZ": [
+    728.7,
+    -64.3
+   ],
+   "orientationY": -180,
+   "topYOriginal": 0,
+   "topYNew": -0.3,
+   "deltaY": -0.3
+  },
+  {
+   "path": "Workspace.Map.Collision.underside[109].island_underside_01_Plastic",
+   "childIndex": 109,
+   "name": "island_underside_01_Plastic",
+   "matchPositionXZ": [
+    773.15,
+    -72.72
+   ],
+   "orientationY": -88,
+   "topYOriginal": 0,
+   "topYNew": -0.3,
+   "deltaY": -0.3
+  },
+  {
+   "path": "Workspace.Map.Collision.underside[110].island_underside_01_Plastic",
+   "childIndex": 110,
+   "name": "island_underside_01_Plastic",
+   "matchPositionXZ": [
+    794.97,
+    -77.78
+   ],
+   "orientationY": -42,
+   "topYOriginal": 0,
+   "topYNew": -0.2,
+   "deltaY": -0.2
+  },
+  {
+   "path": "Workspace.Map.Collision.underside[111].island_underside_01_Plastic",
+   "childIndex": 111,
+   "name": "island_underside_01_Plastic",
+   "matchPositionXZ": [
+    796.01,
+    -80.33
+   ],
+   "orientationY": -180,
+   "topYOriginal": 0,
+   "topYNew": -0.1,
+   "deltaY": -0.1
+  },
+  {
+   "path": "Workspace.Map.Collision.underside[113].island_underside_01_Plastic",
+   "childIndex": 113,
+   "name": "island_underside_01_Plastic",
+   "matchPositionXZ": [
+    804.27,
+    -123.51
+   ],
+   "orientationY": -88,
+   "topYOriginal": 0,
+   "topYNew": -0.1,
+   "deltaY": -0.1
+  },
+  {
+   "path": "Workspace.Map.Collision.underside[114].island_underside_01_Plastic",
+   "childIndex": 114,
+   "name": "island_underside_01_Plastic",
+   "matchPositionXZ": [
+    807.99,
+    -145.95
+   ],
+   "orientationY": -42,
+   "topYOriginal": 0,
+   "topYNew": -0.2,
+   "deltaY": -0.2
+  },
+  {
+   "path": "Workspace.Map.Collision.underside[116].island_underside_01_Plastic",
+   "childIndex": 116,
+   "name": "island_underside_01_Plastic",
+   "matchPositionXZ": [
+    813.58,
+    -190.47
+   ],
+   "orientationY": 50,
+   "topYOriginal": 0,
+   "topYNew": -0.1,
+   "deltaY": -0.1
+  },
+  {
+   "path": "Workspace.Map.Collision.underside[118].island_underside_01_Plastic",
+   "childIndex": 118,
+   "name": "island_underside_01_Plastic",
+   "matchPositionXZ": [
+    843.99,
+    -213.54
+   ],
+   "orientationY": -134,
+   "topYOriginal": 0,
+   "topYNew": -0.1,
+   "deltaY": -0.1
+  },
+  {
+   "path": "Workspace.Map.Collision.underside[120].island_underside_01_Plastic",
+   "childIndex": 120,
+   "name": "island_underside_01_Plastic",
+   "matchPositionXZ": [
+    885.21,
+    -223.78
+   ],
+   "orientationY": -42,
+   "topYOriginal": 0,
+   "topYNew": -0.1,
+   "deltaY": -0.1
+  },
+  {
+   "path": "Workspace.Map.Collision.underside[122].island_underside_01_Plastic",
+   "childIndex": 122,
+   "name": "island_underside_01_Plastic",
+   "matchPositionXZ": [
+    924.85,
+    -230.94
+   ],
+   "orientationY": -180,
+   "topYOriginal": 0,
+   "topYNew": -0.1,
+   "deltaY": -0.1
+  },
+  {
+   "path": "Workspace.Map.Collision.underside[124].island_underside_01_Plastic",
+   "childIndex": 124,
+   "name": "island_underside_01_Plastic",
+   "matchPositionXZ": [
+    970.08,
+    -227.87
+   ],
+   "orientationY": -88,
+   "topYOriginal": 0,
+   "topYNew": -0.1,
+   "deltaY": -0.1
+  },
+  {
+   "path": "Workspace.Map.Collision.underside[126].island_underside_01_Plastic",
+   "childIndex": 126,
+   "name": "island_underside_01_Plastic",
+   "matchPositionXZ": [
+    1013.81,
+    -226.56
+   ],
+   "orientationY": 4,
+   "topYOriginal": 0,
+   "topYNew": -0.1,
+   "deltaY": -0.1
+  },
+  {
+   "path": "Workspace.Map.Collision.underside[127].island_underside_01_Plastic",
+   "childIndex": 127,
+   "name": "island_underside_01_Plastic",
+   "matchPositionXZ": [
+    1034.84,
+    -225.46
+   ],
+   "orientationY": 50,
+   "topYOriginal": 0,
+   "topYNew": -0.2,
+   "deltaY": -0.2
+  },
+  {
+   "path": "Workspace.Map.Collision.underside[129].island_underside_01_Plastic",
+   "childIndex": 129,
+   "name": "island_underside_01_Plastic",
+   "matchPositionXZ": [
+    1062.29,
+    -207.09
+   ],
+   "orientationY": -134,
+   "topYOriginal": 0,
+   "topYNew": -0.1,
+   "deltaY": -0.1
+  },
+  {
+   "path": "Workspace.Map.Collision.underside[131].island_underside_01_Plastic",
+   "childIndex": 131,
+   "name": "island_underside_01_Plastic",
+   "matchPositionXZ": [
+    1095.51,
+    -184.13
+   ],
+   "orientationY": -42,
+   "topYOriginal": 0,
+   "topYNew": -0.1,
+   "deltaY": -0.1
+  },
+  {
+   "path": "Workspace.Map.Collision.underside[133].island_underside_01_Plastic",
+   "childIndex": 133,
+   "name": "island_underside_01_Plastic",
+   "matchPositionXZ": [
+    1123.78,
+    -154.35
+   ],
+   "orientationY": -180,
+   "topYOriginal": 0,
+   "topYNew": -0.1,
+   "deltaY": -0.1
+  },
+  {
+   "path": "Workspace.Map.Collision.underside[135].island_underside_01_Plastic",
+   "childIndex": 135,
+   "name": "island_underside_01_Plastic",
+   "matchPositionXZ": [
+    1130.83,
+    -110.56
+   ],
+   "orientationY": -88,
+   "topYOriginal": 0,
+   "topYNew": -0.1,
+   "deltaY": -0.1
+  },
+  {
+   "path": "Workspace.Map.Collision.underside[137].island_underside_01_Plastic",
+   "childIndex": 137,
+   "name": "island_underside_01_Plastic",
+   "matchPositionXZ": [
+    1136.38,
+    -68.52
+   ],
+   "orientationY": 4,
+   "topYOriginal": 0,
+   "topYNew": -0.1,
+   "deltaY": -0.1
+  },
+  {
+   "path": "Workspace.Map.Collision.underside[139].island_underside_01_Plastic",
+   "childIndex": 139,
+   "name": "island_underside_01_Plastic",
+   "matchPositionXZ": [
+    1137.9,
+    -33.69
+   ],
+   "orientationY": -180,
+   "topYOriginal": 0,
+   "topYNew": -0.2,
+   "deltaY": -0.2
+  },
+  {
+   "path": "Workspace.Map.Collision.underside[140].island_underside_01_Plastic",
+   "childIndex": 140,
+   "name": "island_underside_01_Plastic",
+   "matchPositionXZ": [
+    1137.75,
+    -11.45
+   ],
+   "orientationY": -134,
+   "topYOriginal": 0,
+   "topYNew": -0.1,
+   "deltaY": -0.1
+  },
+  {
+   "path": "Workspace.Map.Collision.underside[142].island_underside_01_Plastic",
+   "childIndex": 142,
+   "name": "island_underside_01_Plastic",
+   "matchPositionXZ": [
+    1137.15,
+    31.15
+   ],
+   "orientationY": -42,
+   "topYOriginal": 0,
+   "topYNew": -0.1,
+   "deltaY": -0.1
+  },
+  {
+   "path": "Workspace.Map.Collision.underside[144].island_underside_01_Plastic",
+   "childIndex": 144,
+   "name": "island_underside_01_Plastic",
+   "matchPositionXZ": [
+    1134.25,
+    73.6
+   ],
+   "orientationY": 50,
+   "topYOriginal": 0,
+   "topYNew": -0.1,
+   "deltaY": -0.1
+  },
+  {
+   "path": "Workspace.Map.Collision.underside[145].island_underside_01_Plastic",
+   "childIndex": 145,
+   "name": "island_underside_01_Plastic",
+   "matchPositionXZ": [
+    1132.55,
+    86.39
+   ],
+   "orientationY": -180,
+   "topYOriginal": 0,
+   "topYNew": -0.2,
+   "deltaY": -0.2
+  },
+  {
+   "path": "Workspace.Map.Collision.underside[147].island_underside_01_Plastic",
+   "childIndex": 147,
+   "name": "island_underside_01_Plastic",
+   "matchPositionXZ": [
+    1129.7,
+    128.77
+   ],
+   "orientationY": -88,
+   "topYOriginal": 0,
+   "topYNew": -0.1,
+   "deltaY": -0.1
+  },
+  {
+   "path": "Workspace.Map.Collision.underside[149].island_underside_01_Plastic",
+   "childIndex": 149,
+   "name": "island_underside_01_Plastic",
+   "matchPositionXZ": [
+    1125.35,
+    169.39
+   ],
+   "orientationY": 4,
+   "topYOriginal": 0,
+   "topYNew": -0.1,
+   "deltaY": -0.1
+  },
+  {
+   "path": "Workspace.Map.Collision.underside[150].island_underside_01_Plastic",
+   "childIndex": 150,
+   "name": "island_underside_01_Plastic",
+   "matchPositionXZ": [
+    1116.81,
+    181.86
+   ],
+   "orientationY": -180,
+   "topYOriginal": 0,
+   "topYNew": -0.2,
+   "deltaY": -0.2
+  },
+  {
+   "path": "Workspace.Map.Collision.underside[152].island_underside_01_Plastic",
+   "childIndex": 152,
+   "name": "island_underside_01_Plastic",
+   "matchPositionXZ": [
+    1082.84,
+    204.24
+   ],
+   "orientationY": -88,
+   "topYOriginal": 0,
+   "topYNew": -0.1,
+   "deltaY": -0.1
+  },
+  {
+   "path": "Workspace.Map.Collision.underside[154].island_underside_01_Plastic",
+   "childIndex": 154,
+   "name": "island_underside_01_Plastic",
+   "matchPositionXZ": [
+    1047.38,
+    224.86
+   ],
+   "orientationY": 4,
+   "topYOriginal": 0,
+   "topYNew": -0.2,
+   "deltaY": -0.2
+  },
+  {
+   "path": "Workspace.Map.Collision.underside[155].island_underside_01_Plastic",
+   "childIndex": 155,
+   "name": "island_underside_01_Plastic",
+   "matchPositionXZ": [
+    1033.58,
+    229.55
+   ],
+   "orientationY": -180,
+   "topYOriginal": 0,
+   "topYNew": -0.1,
+   "deltaY": -0.1
+  },
+  {
+   "path": "Workspace.Map.Collision.underside[157].island_underside_01_Plastic",
+   "childIndex": 157,
+   "name": "island_underside_01_Plastic",
+   "matchPositionXZ": [
+    991.53,
+    228.62
+   ],
+   "orientationY": -88,
+   "topYOriginal": 0,
+   "topYNew": -0.1,
+   "deltaY": -0.1
+  },
+  {
+   "path": "Workspace.Map.Collision.underside[159].island_underside_01_Plastic",
+   "childIndex": 159,
+   "name": "island_underside_01_Plastic",
+   "matchPositionXZ": [
+    947.99,
+    225.93
+   ],
+   "orientationY": 4,
+   "topYOriginal": 0,
+   "topYNew": -0.1,
+   "deltaY": -0.1
+  },
+  {
+   "path": "Workspace.Map.Collision.underside[161].island_underside_01_Plastic",
+   "childIndex": 161,
+   "name": "island_underside_01_Plastic",
+   "matchPositionXZ": [
+    913.27,
+    225.5
+   ],
+   "orientationY": -180,
+   "topYOriginal": 0,
+   "topYNew": -0.2,
+   "deltaY": -0.2
+  },
+  {
+   "path": "Workspace.Map.Collision.underside[162].island_underside_01_Plastic",
+   "childIndex": 162,
+   "name": "island_underside_01_Plastic",
+   "matchPositionXZ": [
+    894.03,
+    221.52
+   ],
+   "orientationY": -134,
+   "topYOriginal": 0,
+   "topYNew": -0.1,
+   "deltaY": -0.1
+  },
+  {
+   "path": "Workspace.Map.Collision.underside[164].island_underside_01_Plastic",
+   "childIndex": 164,
+   "name": "island_underside_01_Plastic",
+   "matchPositionXZ": [
+    855.25,
+    211.68
+   ],
+   "orientationY": -42,
+   "topYOriginal": 0,
+   "topYNew": -0.1,
+   "deltaY": -0.1
+  },
+  {
+   "path": "Workspace.Map.Collision.underside[166].island_underside_01_Plastic",
+   "childIndex": 166,
+   "name": "island_underside_01_Plastic",
+   "matchPositionXZ": [
+    814.35,
+    196.11
+   ],
+   "orientationY": -180,
+   "topYOriginal": 0,
+   "topYNew": -0.1,
+   "deltaY": -0.1
+  },
+  {
+   "path": "Workspace.Map.Collision.underside[168].island_underside_01_Plastic",
+   "childIndex": 168,
+   "name": "island_underside_01_Plastic",
+   "matchPositionXZ": [
+    809.27,
+    154.61
+   ],
+   "orientationY": -88,
+   "topYOriginal": 0,
+   "topYNew": -0.1,
+   "deltaY": -0.1
+  },
+  {
+   "path": "Workspace.Map.Collision.underside[170].island_underside_01_Plastic",
+   "childIndex": 170,
+   "name": "island_underside_01_Plastic",
+   "matchPositionXZ": [
+    802.7,
+    111.34
+   ],
+   "orientationY": 4,
+   "topYOriginal": 0,
+   "topYNew": -0.2,
+   "deltaY": -0.2
+  },
+  {
+   "path": "Workspace.Map.Collision.underside[171].island_underside_01_Plastic",
+   "childIndex": 171,
+   "name": "island_underside_01_Plastic",
+   "matchPositionXZ": [
+    798.58,
+    90.15
+   ],
+   "orientationY": 50,
+   "topYOriginal": 0,
+   "topYNew": -0.1,
+   "deltaY": -0.1
+  },
+  {
+   "path": "Workspace.Map.Collision.underside[172].island_underside_01_Plastic",
+   "childIndex": 172,
+   "name": "island_underside_01_Plastic",
+   "matchPositionXZ": [
+    792.99,
+    78.54
+   ],
+   "orientationY": -180,
+   "topYOriginal": 0,
+   "topYNew": -0.2,
+   "deltaY": -0.2
+  },
+  {
+   "path": "Workspace.Map.Collision.underside[174].island_underside_01_Plastic",
+   "childIndex": 174,
+   "name": "island_underside_01_Plastic",
+   "matchPositionXZ": [
+    751.72,
+    70.13
+   ],
+   "orientationY": -88,
+   "topYOriginal": 0,
+   "topYNew": -0.1,
+   "deltaY": -0.1
+  },
+  {
+   "path": "Workspace.Map.Collision.underside[175].island_underside_01_Plastic",
+   "childIndex": 175,
+   "name": "island_underside_01_Plastic",
+   "matchPositionXZ": [
+    730.68,
+    65.06
+   ],
+   "orientationY": -42,
+   "topYOriginal": 0,
+   "topYNew": -0.3,
+   "deltaY": -0.3
+  },
+  {
+   "path": "Workspace.Map.Collision.underside[176].island_underside_01_Plastic",
+   "childIndex": 176,
+   "name": "island_underside_01_Plastic",
+   "matchPositionXZ": [
+    728.13,
+    66.19
+   ],
+   "orientationY": -180,
+   "topYOriginal": 0,
+   "topYNew": -0.2,
+   "deltaY": -0.2
+  },
+  {
+   "path": "Workspace.Map.Collision.underside[178].island_underside_01_Plastic",
+   "childIndex": 178,
+   "name": "island_underside_01_Plastic",
+   "matchPositionXZ": [
+    729.72,
+    110.35
+   ],
+   "orientationY": -88,
+   "topYOriginal": 0,
+   "topYNew": -0.2,
+   "deltaY": -0.2
+  },
+  {
+   "path": "Workspace.Map.Collision.underside[179].island_underside_01_Plastic",
+   "childIndex": 179,
+   "name": "island_underside_01_Plastic",
+   "matchPositionXZ": [
+    730.11,
+    131.57
+   ],
+   "orientationY": -42,
+   "topYOriginal": 0,
+   "topYNew": -0.1,
+   "deltaY": -0.1
+  },
+  {
+   "path": "Workspace.Map.Collision.underside[181].island_underside_01_Plastic",
+   "childIndex": 181,
+   "name": "island_underside_01_Plastic",
+   "matchPositionXZ": [
+    722.34,
+    177.36
+   ],
+   "orientationY": -180,
+   "topYOriginal": 0,
+   "topYNew": -0.1,
+   "deltaY": -0.1
+  },
+  {
+   "path": "Workspace.Map.Collision.underside[182].island_underside_01_Plastic",
+   "childIndex": 182,
+   "name": "island_underside_01_Plastic",
+   "matchPositionXZ": [
+    706.59,
+    191.64
+   ],
+   "orientationY": -134,
+   "topYOriginal": 0,
+   "topYNew": -0.2,
+   "deltaY": -0.2
+  },
+  {
+   "path": "Workspace.Map.Collision.underside[184].island_underside_01_Plastic",
+   "childIndex": 184,
+   "name": "island_underside_01_Plastic",
+   "matchPositionXZ": [
+    674.71,
+    217.94
+   ],
+   "orientationY": -42,
+   "topYOriginal": 0,
+   "topYNew": -0.3,
+   "deltaY": -0.3
+  },
+  {
+   "path": "Workspace.Map.Collision.underside[185].island_underside_01_Plastic",
+   "childIndex": 185,
+   "name": "island_underside_01_Plastic",
+   "matchPositionXZ": [
+    657.7,
+    230.74
+   ],
+   "orientationY": 4,
+   "topYOriginal": 0,
+   "topYNew": -0.1,
+   "deltaY": -0.1
+  },
+  {
+   "path": "Workspace.Map.Collision.underside[186].island_underside_01_Plastic",
+   "childIndex": 186,
+   "name": "island_underside_01_Plastic",
+   "matchPositionXZ": [
+    643.33,
+    236.53
+   ],
+   "orientationY": -180,
+   "topYOriginal": 0,
+   "topYNew": -0.2,
+   "deltaY": -0.2
+  },
+  {
+   "path": "Workspace.Map.Collision.underside[188].island_underside_01_Plastic",
+   "childIndex": 188,
+   "name": "island_underside_01_Plastic",
+   "matchPositionXZ": [
+    601.89,
+    234.38
+   ],
+   "orientationY": -88,
+   "topYOriginal": 0,
+   "topYNew": -0.2,
+   "deltaY": -0.2
+  },
+  {
+   "path": "Workspace.Map.Collision.underside[189].island_underside_01_Plastic",
+   "childIndex": 189,
+   "name": "island_underside_01_Plastic",
+   "matchPositionXZ": [
+    580.7,
+    232.28
+   ],
+   "orientationY": -42,
+   "topYOriginal": 0,
+   "topYNew": -0.1,
+   "deltaY": -0.1
+  },
+  {
+   "path": "Workspace.Map.Collision.underside[190].island_underside_01_Plastic",
+   "childIndex": 190,
+   "name": "island_underside_01_Plastic",
+   "matchPositionXZ": [
+    558.68,
+    230.14
+   ],
+   "orientationY": 4,
+   "topYOriginal": 0,
+   "topYNew": -0.2,
+   "deltaY": -0.2
+  },
+  {
+   "path": "Workspace.Map.Collision.underside[192].island_underside_01_Plastic",
+   "childIndex": 192,
+   "name": "island_underside_01_Plastic",
+   "matchPositionXZ": [
+    513.84,
+    230.27
+   ],
+   "orientationY": -180,
+   "topYOriginal": 0,
+   "topYNew": -0.1,
+   "deltaY": -0.1
+  },
+  {
+   "path": "Workspace.Map.Collision.underside[193].island_underside_01_Plastic",
+   "childIndex": 193,
+   "name": "island_underside_01_Plastic",
+   "matchPositionXZ": [
+    492.93,
+    232.59
+   ],
+   "orientationY": -134,
+   "topYOriginal": 0,
+   "topYNew": -0.2,
+   "deltaY": -0.2
+  },
+  {
+   "path": "Workspace.Map.Collision.underside[195].island_underside_01_Plastic",
+   "childIndex": 195,
+   "name": "island_underside_01_Plastic",
+   "matchPositionXZ": [
+    450.75,
+    234.98
+   ],
+   "orientationY": -42,
+   "topYOriginal": 0,
+   "topYNew": -0.1,
+   "deltaY": -0.1
+  },
+  {
+   "path": "Workspace.Map.Collision.underside[196].island_underside_01_Plastic",
+   "childIndex": 196,
+   "name": "island_underside_01_Plastic",
+   "matchPositionXZ": [
+    428.58,
+    235.81
+   ],
+   "orientationY": 4,
+   "topYOriginal": 0,
+   "topYNew": -0.3,
+   "deltaY": -0.3
+  },
+  {
+   "path": "Workspace.Map.Collision.underside[198].island_underside_01_Plastic",
+   "childIndex": 198,
+   "name": "island_underside_01_Plastic",
+   "matchPositionXZ": [
+    392.99,
+    238.46
+   ],
+   "orientationY": -180,
+   "topYOriginal": 0,
+   "topYNew": -0.2,
+   "deltaY": -0.2
+  },
+  {
+   "path": "Workspace.Map.Collision.underside[199].island_underside_01_Plastic",
+   "childIndex": 199,
+   "name": "island_underside_01_Plastic",
+   "matchPositionXZ": [
+    373.9,
+    233.96
+   ],
+   "orientationY": -134,
+   "topYOriginal": 0,
+   "topYNew": -0.1,
+   "deltaY": -0.1
+  },
+  {
+   "path": "Workspace.Map.Collision.underside[200].island_underside_01_Plastic",
+   "childIndex": 200,
+   "name": "island_underside_01_Plastic",
+   "matchPositionXZ": [
+    354.89,
+    228.64
+   ],
+   "orientationY": -88,
+   "topYOriginal": 0,
+   "topYNew": -0.2,
+   "deltaY": -0.2
+  },
+  {
+   "path": "Workspace.Map.Collision.underside[202].island_underside_01_Plastic",
+   "childIndex": 202,
+   "name": "island_underside_01_Plastic",
+   "matchPositionXZ": [
+    315.01,
+    216.73
+   ],
+   "orientationY": 4,
+   "topYOriginal": 0,
+   "topYNew": -0.2,
+   "deltaY": -0.2
+  },
+  {
+   "path": "Workspace.Map.Collision.underside[203].island_underside_01_Plastic",
+   "childIndex": 203,
+   "name": "island_underside_01_Plastic",
+   "matchPositionXZ": [
+    292.99,
+    208.44
+   ],
+   "orientationY": -180,
+   "topYOriginal": 0,
+   "topYNew": -0.1,
+   "deltaY": -0.1
+  },
+  {
+   "path": "Workspace.Map.Collision.underside[205].island_underside_01_Plastic",
+   "childIndex": 205,
+   "name": "island_underside_01_Plastic",
+   "matchPositionXZ": [
+    274.89,
+    173.62
+   ],
+   "orientationY": -88,
+   "topYOriginal": 0,
+   "topYNew": -0.2,
+   "deltaY": -0.2
+  },
+  {
+   "path": "Workspace.Map.Collision.underside[207].island_underside_01_Plastic",
+   "childIndex": 207,
+   "name": "island_underside_01_Plastic",
+   "matchPositionXZ": [
+    254.96,
+    135.46
+   ],
+   "orientationY": -180,
+   "topYOriginal": 0,
+   "topYNew": -0.2,
+   "deltaY": -0.2
+  },
+  {
+   "path": "Workspace.Map.Collision.underside[208].island_underside_01_Plastic",
+   "childIndex": 208,
+   "name": "island_underside_01_Plastic",
+   "matchPositionXZ": [
+    255.87,
+    114.48
+   ],
+   "orientationY": -134,
+   "topYOriginal": 0,
+   "topYNew": -0.1,
+   "deltaY": -0.1
+  },
+  {
+   "path": "Workspace.Map.Collision.underside[209].island_underside_01_Plastic",
+   "childIndex": 209,
+   "name": "island_underside_01_Plastic",
+   "matchPositionXZ": [
+    256.86,
+    92.68
+   ],
+   "orientationY": -88,
+   "topYOriginal": 0,
+   "topYNew": -0.2,
+   "deltaY": -0.2
+  },
+  {
+   "path": "Workspace.Map.Collision.underside[211].island_underside_01_Plastic",
+   "childIndex": 211,
+   "name": "island_underside_01_Plastic",
+   "matchPositionXZ": [
+    256.98,
+    47.8
+   ],
+   "orientationY": 4,
+   "topYOriginal": 0,
+   "topYNew": -0.2,
+   "deltaY": -0.2
+  },
+  {
+   "path": "Workspace.Map.Collision.underside[212].island_underside_01_Plastic",
+   "childIndex": 212,
+   "name": "island_underside_01_Plastic",
+   "matchPositionXZ": [
+    256.04,
+    25.89
+   ],
+   "orientationY": 50,
+   "topYOriginal": 0,
+   "topYNew": -0.1,
+   "deltaY": -0.1
+  },
+  {
+   "path": "Workspace.Map.Collision.underside[213].island_underside_01_Plastic",
+   "childIndex": 213,
+   "name": "island_underside_01_Plastic",
+   "matchPositionXZ": [
+    255.08,
+    -36.25
+   ],
+   "orientationY": -172,
+   "topYOriginal": 0,
+   "topYNew": -0.1,
+   "deltaY": -0.1
+  },
+  {
+   "path": "Workspace.Map.Collision.underside[215].island_underside_01_Plastic",
+   "childIndex": 215,
+   "name": "island_underside_01_Plastic",
+   "matchPositionXZ": [
+    257,
+    -79.31
+   ],
+   "orientationY": -80,
+   "topYOriginal": 0,
+   "topYNew": -0.1,
+   "deltaY": -0.1
+  },
+  {
+   "path": "Workspace.Map.Collision.underside[217].island_underside_01_Plastic",
+   "childIndex": 217,
+   "name": "island_underside_01_Plastic",
+   "matchPositionXZ": [
+    256.85,
+    -124.18
+   ],
+   "orientationY": 12,
+   "topYOriginal": 0,
+   "topYNew": -0.2,
+   "deltaY": -0.2
+  },
+  {
+   "path": "Workspace.Map.Collision.underside[218].island_underside_01_Plastic",
+   "childIndex": 218,
+   "name": "island_underside_01_Plastic",
+   "matchPositionXZ": [
+    255.85,
+    -145.95
+   ],
+   "orientationY": 58,
+   "topYOriginal": 0,
+   "topYNew": -0.1,
+   "deltaY": -0.1
+  }
+ ]
+}
