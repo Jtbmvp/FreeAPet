@@ -5684,5 +5684,23 @@
    "topYNew": -6.294,
    "deltaY": -0.3
   }
- ]
+ ],
+ "status": "NOT APPLIED - test drop reverted 2026-11-07 ~23h; look changed (Linen stud strip at rim base replaced by Terrain). Pending Atlas/JB decision on which layer stays on top.",
+ "visualRisk": {
+  "method": "4x4-stud grid with CanQuery temporarily enabled on underside (parts are CanQuery=false; restored)",
+  "cellsWithPieceTop": 8060,
+  "cellsWherePieceStudsWereOnTopOfTerrainAndWouldBeHidden": 1728,
+  "approxAreaStuds2": 27648,
+  "terrainMaterialsRevealed": {
+   "Grass": 734,
+   "LeafyGrass": 437,
+   "Sand": 214,
+   "Asphalt": 171,
+   "Salt": 104,
+   "Ground": 66,
+   "Mud": 2
+  },
+  "cellsUnderCliffsOrProps": 3337,
+  "cellsWithNoCoverStillVisible": 2995
+ }
 }
