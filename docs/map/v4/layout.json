@@ -1,0 +1,61 @@
+{
+ "version": "V4-draft-1",
+ "author": "Gaia (MIDAS)",
+ "notes": [
+  "Rascunho antes do CONTRACT.md (Forge) e do ART.md (Iris); medidas em studs, eixo X = ilhas lado a lado como no V3.",
+  "Valores marcados measureFromV3 são lidos do V3 no levantamento do bloco 1 (nunca coordenadas adivinhadas).",
+  "Tudo é construído em Workspace.MapV4_Staging com offset stagingOffset; o corte move o staging para a origem."
+ ],
+ "stagingRoot": "MapV4_Staging",
+ "stagingOffset": [0, 0, 3000],
+ "groundY": 0,
+ "minSurfaceGap": 0.1,
+ "materialVariants": { "structure": "Studs", "fill": "Universal", "rockTop": "Inlet" },
+ "contractFolders": ["Collision", "Zones", "SpawnAreas", "Bases", "FX"],
+ "islands": [
+  {
+   "id": "SafeZone",
+   "block": 1,
+   "rect": { "minX": -205, "maxX": 205, "minZ": -240, "maxZ": 240 },
+   "terrain": { "top": "Grass", "path": "Pavement", "edge": "Sand", "strata": ["Sandstone", "Rock"], "depth": 24 },
+   "palette": { "grass": [126, 179, 60], "path": [176, 170, 210], "dirt": [232, 126, 120], "accent": [255, 196, 64] },
+   "features": {
+    "fountain": { "center": [0, 0], "radius": 18, "measureFromV3": "landmarks.spawn_fountain", "healPoint": true, "beacon": "FountainBeacon" },
+    "bases": { "count": 5, "measureFromV3": "Collision.base_1..base_5 + Map.Bases", "gate": true, "plotFloorAboveGround": 1.0 },
+    "spawns": { "measureFromV3": "Collision.Spawns + Map.SpawnAreas" },
+    "leaderboards": { "measureFromV3": "plaza.leaderboard_frame" }
+   },
+   "zones": ["Zone_SafeZone", "Zone_Base_*"]
+  },
+  {
+   "id": "Forest",
+   "block": 2,
+   "rect": { "minX": 255, "maxX": 730, "minZ": -240, "maxZ": 240 },
+   "terrain": { "top": "Grass", "path": "Ground", "edge": "Mud", "strata": ["Sandstone", "Rock"], "depth": 26 },
+   "palette": { "grass": [84, 175, 59], "leaf": [77, 161, 54], "trunk": [232, 126, 120], "path": [207, 109, 76], "accent": [255, 90, 90] },
+   "features": {
+    "river": { "measureFromV3": "terrain Water", "levels": 2 },
+    "clearings": { "measureFromV3": "Collision.clearings", "count": 6 },
+    "trees": { "recipe": "voxel-blob", "ringTrees": 14, "fieldTrees": 6 },
+    "mushroomHollow": { "measureFromV3": "scatter:mushroom_hollow" }
+   },
+   "zones": ["Zone_Forest*"]
+  },
+  {
+   "id": "Desert",
+   "block": 3,
+   "rect": { "minX": 730, "maxX": 1140, "minZ": -240, "maxZ": 240 },
+   "terrain": { "top": "Sand", "path": "Sandstone", "edge": "Salt", "strata": ["Sandstone", "Rock"], "depth": 26 },
+   "palette": { "sand": [236, 206, 150], "rock": [207, 109, 76], "mesa": [232, 126, 120], "cactus": [84, 175, 59], "accent": [255, 196, 64] },
+   "features": {
+    "mesas": { "measureFromV3": "terrace.mesa_wall" },
+    "clearings": { "measureFromV3": "Collision.clearings" },
+    "trees": { "recipe": "palm", "count": 10 }
+   },
+   "zones": ["Zone_Desert*"]
+  }
+ ],
+ "rim": { "recipe": "plateau-masses", "minHeight": 16, "tallHeight": [23, 27], "overlap": 0.2, "noGaps": true },
+ "bridges": { "measureFromV3": "paths.stone_bridge_long + paths.wooden_bridge", "recipe": "arched-wood" },
+ "lighting": { "preset": "bright-cartoon", "clockTime": 13.5, "brightness": 2.5, "measureFromV3": "Lighting (FreeAPet* effects)" }
+}
