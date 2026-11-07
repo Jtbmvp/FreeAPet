@@ -1,3 +1,5 @@
+> **Nota (2026-11-07):** documento histórico em parte. O roubo de pets saiu do jogo, que agora assenta em batalhas, e o código entra no Studio pela MCP, não pelo plugin do Rojo. Em caso de conflito, prevalece `docs/DECISIONS.md`.
+
 # Polimento das batalhas e da UI: auditoria e plano
 
 Estado: **aprovado** (28 out 2026). Feito: 1, 2, 4 (+ Acorn Squirrel), 5, 6 (parte da batalha). Feito também: ataques das 6 criaturas (C01–C18) e pontos da equipa. Falta: 3 (pets v3, precisa dos GLB), ataques dos iniciais (depois de terem ataques na Config) e compactar as outras janelas.

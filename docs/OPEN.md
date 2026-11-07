@@ -1,3 +1,5 @@
+> **Nota (2026-11-07):** documento histórico em parte. O roubo de pets saiu do jogo, que agora assenta em batalhas, e o código entra no Studio pela MCP, não pelo plugin do Rojo. Em caso de conflito, prevalece `docs/DECISIONS.md`.
+
 # Perguntas em aberto
 
 Do brief (secção 7). Não inventar respostas: perguntar ao developer, uma de cada vez.

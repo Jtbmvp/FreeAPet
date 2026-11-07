@@ -1,3 +1,5 @@
+> **Nota (2026-11-07):** documento histórico em parte. O roubo de pets saiu do jogo, que agora assenta em batalhas, e o código entra no Studio pela MCP, não pelo plugin do Rojo. Em caso de conflito, prevalece `docs/DECISIONS.md`.
+
 # Free a Pet! — estado do protótipo (27 out 2026)
 
 Todos os passos da ordem aprovada estão programados. Abaixo está o que existe, o que foi testado e o que falta testar.

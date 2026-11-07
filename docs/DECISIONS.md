@@ -132,3 +132,7 @@ Registo das decisões tomadas fora do brief (ou que o alteram). O brief original
 ### 2026-11-07 — LihFolk Vault e repositório público (Atlas, a pedido do JB)
 - Revoga "só inspiração": a equipa pode e deve retirar do LIH.FOLK.VAULT o que for útil para o jogo, sem obrigação. Limites da licença: nada de redistribuir no repositório público, assets do pack só privados no Roblox, Dataset só para estudo.
 - O repositório é público. O trabalho partilhado vive em `v3-integration`, publicado com `scripts/publish-clean.sh`; o ramo local `feat/v3-systems` tem o vault e pesados e nunca sobe (hook `pre-push`).
+
+### 2026-11-07 — Rumo do jogo e sincronização (JB)
+- O jogo já não é de roubar pets: o núcleo é batalhar com eles. Revoga as decisões de roubo anteriores.
+- Sincronização pela MCP do Studio; o plugin do Rojo já não é usado. O `rojo` fica só como compilador local em `scripts/build-sync.sh`.

@@ -1,3 +1,5 @@
+> **Nota (2026-11-07):** documento histórico em parte. O roubo de pets saiu do jogo, que agora assenta em batalhas, e o código entra no Studio pela MCP, não pelo plugin do Rojo. Em caso de conflito, prevalece `docs/DECISIONS.md`.
+
 # Batalhas selvagens — proposta para rever
 
 Estado: **aprovado e programado** (27 out 2026). Desligado no jogo publicado até chegar a arte dos iniciais; ligado no Studio com o Debug.
