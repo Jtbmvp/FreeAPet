@@ -139,17 +139,28 @@ local function update(player: Player)
 end
 
 function ZoneService.Start()
-	local map = workspace:WaitForChild("Map")
-	for _, part in map:WaitForChild("Zones"):GetChildren() do
-		if part:IsA("BasePart") and part:GetAttribute("ZoneId") then
-			table.insert(zoneParts, part)
+	-- Timeouts so a missing map piece warns instead of stalling every later service.
+	local map = workspace:WaitForChild("Map", 10)
+	local zones = map and map:WaitForChild("Zones", 5)
+	local bases = map and map:WaitForChild("Bases", 5)
+	if zones then
+		for _, part in zones:GetChildren() do
+			if part:IsA("BasePart") and part:GetAttribute("ZoneId") then
+				table.insert(zoneParts, part)
+			end
 		end
+	else
+		warn("[ZoneService] Workspace.Map.Zones not found: every player is in zone None")
 	end
-	for _, plot in map:WaitForChild("Bases"):GetChildren() do
-		local safe = plot:FindFirstChild("SafeZone")
-		if safe and safe:IsA("BasePart") then
-			table.insert(safeParts, safe)
+	if bases then
+		for _, plot in bases:GetChildren() do
+			local safe = plot:FindFirstChild("SafeZone")
+			if safe and safe:IsA("BasePart") then
+				table.insert(safeParts, safe)
+			end
 		end
+	else
+		warn("[ZoneService] Workspace.Map.Bases not found: no safe zones")
 	end
 
 	task.spawn(function()

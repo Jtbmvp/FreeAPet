@@ -6,12 +6,15 @@ local Players = game:GetService("Players")
 
 local BaseService = {}
 
-local plotsFolder: Folder
+local plotsFolder: Instance? = nil
 local ownerByPlot: { [Model]: Player } = {}
 local plotByPlayer: { [Player]: Model } = {}
 
 local function sortedPlots(): { Model }
 	local plots = {}
+	if not plotsFolder then
+		return plots
+	end
 	for _, child in plotsFolder:GetChildren() do
 		if child:IsA("Model") then
 			table.insert(plots, child)
@@ -114,7 +117,12 @@ function BaseService.GetPlotOwner(plot: Model): Player?
 end
 
 function BaseService.Start()
-	plotsFolder = workspace:WaitForChild("Map"):WaitForChild("Bases") :: Folder
+	-- Timeouts so a missing map piece warns instead of stalling every later service.
+	local map = workspace:WaitForChild("Map", 10)
+	plotsFolder = map and map:WaitForChild("Bases", 5)
+	if not plotsFolder then
+		warn("[BaseService] Workspace.Map.Bases not found: players get no base")
+	end
 	for _, plot in sortedPlots() do
 		setOwnerLabel(plot, nil)
 	end

@@ -834,8 +834,8 @@ function BattleService.HealAtFountain(player: Player): (boolean, string)
 end
 
 local function addHealingPoint()
-	local map = Workspace:WaitForChild("Map")
-	local fountain = map:FindFirstChild("spawn_fountain", true)
+	local map = Workspace:WaitForChild("Map", 10)
+	local fountain = map and map:FindFirstChild("spawn_fountain", true)
 	if not fountain then
 		warn("[BattleService] No spawn_fountain in the map: no healing point")
 		return
