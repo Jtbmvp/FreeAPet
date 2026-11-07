@@ -133,6 +133,71 @@ local function pickArea(speciesId: string, rare: boolean?): BasePart?
 	return areas[rng:NextInteger(1, #areas)]
 end
 
+local function addArea(byKey: { [string]: { BasePart } }, key: string, area: BasePart)
+	byKey[key] = byKey[key] or {}
+	table.insert(byKey[key], area)
+end
+
+-- Reads spawn areas from the map. Primary source: BaseParts anywhere under
+-- Map.SpawnAreas (nested folders allowed) with SpeciesId / BiomeId / Rare
+-- attributes. Fallback for maps that only carry the design markers
+-- (PetSpawn_<SpeciesId> / RarePetSpawn_<SpeciesId> parts anywhere under Map):
+-- used only for species with no attributed area of that kind.
+local function collectSpawnAreas(map: Instance)
+	local folder = map:WaitForChild("SpawnAreas", 5)
+	if folder then
+		for _, area in folder:GetDescendants() do
+			if area:IsA("BasePart") then
+				local speciesId = area:GetAttribute("SpeciesId")
+				local biomeId = area:GetAttribute("BiomeId")
+				if typeof(speciesId) == "string" and speciesId ~= "" then
+					local byKind = if area:GetAttribute("Rare")
+						then rareAreasBySpecies
+						else spawnAreasBySpecies
+					addArea(byKind, speciesId, area)
+				elseif typeof(biomeId) == "string" then
+					addArea(spawnAreasByBiome, biomeId, area)
+				end
+			end
+		end
+	else
+		warn("[AnimalService] Workspace.Map.SpawnAreas not found; looking for PetSpawn_* markers")
+	end
+
+	local attributedNormal = table.clone(spawnAreasBySpecies)
+	local attributedRare = table.clone(rareAreasBySpecies)
+	local fromMarkers = 0
+	for _, part in map:GetDescendants() do
+		if part:IsA("BasePart") and not (folder and part:IsDescendantOf(folder)) then
+			local rareId = string.match(part.Name, "^RarePetSpawn_(%w+)$")
+			local speciesId = rareId or string.match(part.Name, "^PetSpawn_(%w+)$")
+			local species = if speciesId then Config.Species[speciesId] else nil
+			if speciesId and species and species.biome and not species.starter then
+				local attributed = if rareId then attributedRare else attributedNormal
+				if not attributed[speciesId] then
+					addArea(if rareId then rareAreasBySpecies else spawnAreasBySpecies, speciesId, part)
+					fromMarkers += 1
+				end
+			end
+		end
+	end
+	if fromMarkers > 0 then
+		warn(`[AnimalService] {fromMarkers} spawn area(s) taken from PetSpawn_* markers`)
+	end
+
+	local missing = {}
+	for id, species in Config.Species do
+		local biome = species.biome
+		if biome and not species.starter and not (spawnAreasBySpecies[id] or spawnAreasByBiome[biome]) then
+			table.insert(missing, id)
+		end
+	end
+	if #missing > 0 then
+		table.sort(missing)
+		warn(`[AnimalService] No spawn area for: {table.concat(missing, ", ")}`)
+	end
+end
+
 function AnimalService.SpawnWild(biomeId: string, forcedSpeciesId: string?, rare: boolean?): AnimalRecord?
 	local speciesId = forcedSpeciesId or rollSpecies(biomeId)
 	if speciesId and Config.Species[speciesId] and Config.Species[speciesId].starter then
@@ -339,21 +404,7 @@ function AnimalService.Start()
 			end
 		end
 	end)
-	local map = workspace:WaitForChild("Map")
-	for _, area in map:WaitForChild("SpawnAreas"):GetChildren() do
-		if area:IsA("BasePart") then
-			local biomeId = area:GetAttribute("BiomeId") :: string
-			local speciesId = area:GetAttribute("SpeciesId")
-			if typeof(speciesId) == "string" then
-				local byKind = if area:GetAttribute("Rare") then rareAreasBySpecies else spawnAreasBySpecies
-				byKind[speciesId] = byKind[speciesId] or {}
-				table.insert(byKind[speciesId], area)
-			else
-				spawnAreasByBiome[biomeId] = spawnAreasByBiome[biomeId] or {}
-				table.insert(spawnAreasByBiome[biomeId], area)
-			end
-		end
-	end
+	collectSpawnAreas(workspace:WaitForChild("Map"))
 
 	local folder = Instance.new("Folder")
 	folder.Name = "Animals"
