@@ -133,6 +133,24 @@ local function artPieces(): { BasePart }
 	end
 	local found: { BasePart } = {}
 	local map = Workspace:FindFirstChild("Map")
+	-- V3 visible geometry lives in Collision. Only explicitly tagged prop roots
+	-- are eligible there: never fade an untagged floor/cliff/ground mesh.
+	local collision = map and map:FindFirstChild("Collision")
+	if collision then
+		for _, object in CollectionService:GetTagged(TAG) do
+			if object:IsDescendantOf(collision) then
+				if object:IsA("BasePart") then
+					table.insert(found, object)
+				elseif object:IsA("Model") then
+					for _, child in object:GetDescendants() do
+						if child:IsA("BasePart") then
+							table.insert(found, child)
+						end
+					end
+				end
+			end
+		end
+	end
 	for _, folderName in { "Art", "FX" } do
 		local folder = map and map:FindFirstChild(folderName)
 		for _, part in (folder and folder:GetDescendants() or {}) do

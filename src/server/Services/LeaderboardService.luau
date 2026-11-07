@@ -35,7 +35,7 @@ local function buildBoard(): Model?
 	if not collision then
 		return nil
 	end
-	params.FilterDescendantsInstances = { collision }
+	params.FilterDescendantsInstances = { collision, Workspace.Terrain }
 	local hit = Workspace:Raycast(settings.position + Vector3.new(0, 80, 0), Vector3.new(0, -200, 0), params)
 	local ground = if hit then hit.Position else settings.position
 
@@ -62,37 +62,56 @@ local function buildBoard(): Model?
 		p.Parent = board
 		return p
 	end
-	part(
-		"PostLeft",
-		Vector3.new(1.2, 16, 1.2),
-		CFrame.new(-8.5, 8, 0),
-		Color3.fromRGB(240, 240, 245),
-		Enum.Material.SmoothPlastic
-	)
-	part(
-		"PostRight",
-		Vector3.new(1.2, 16, 1.2),
-		CFrame.new(8.5, 8, 0),
-		Color3.fromRGB(240, 240, 245),
-		Enum.Material.SmoothPlastic
-	)
-	local panel = part(
-		"Panel",
-		Vector3.new(16, 13, 0.8),
-		CFrame.new(0, 9.5, 0),
-		UITheme.colors.panelBottom,
-		Enum.Material.SmoothPlastic
-	)
-	part("Trim", Vector3.new(17, 0.8, 1.2), CFrame.new(0, 16.3, 0), UITheme.colors.gold, Enum.Material.Neon)
+	local sourceBoard = collision:FindFirstChild("board_panel", true)
+	local sourcePanel = if sourceBoard and sourceBoard:IsA("BasePart") then sourceBoard else nil
+	if not sourcePanel then
+		part(
+			"PostLeft",
+			Vector3.new(1.2, 16, 1.2),
+			CFrame.new(-8.5, 8, 0),
+			Color3.fromRGB(240, 240, 245),
+			Enum.Material.SmoothPlastic
+		)
+		part(
+			"PostRight",
+			Vector3.new(1.2, 16, 1.2),
+			CFrame.new(8.5, 8, 0),
+			Color3.fromRGB(240, 240, 245),
+			Enum.Material.SmoothPlastic
+		)
+	end
+	local panel = if sourcePanel
+		then sourcePanel
+		else part(
+			"Panel",
+			Vector3.new(16, 13, 0.8),
+			CFrame.new(0, 9.5, 0),
+			UITheme.colors.panelBottom,
+			Enum.Material.SmoothPlastic
+		)
+	if not sourcePanel then
+		part(
+			"Trim",
+			Vector3.new(17, 0.8, 1.2),
+			CFrame.new(0, 16.3, 0),
+			UITheme.colors.gold,
+			Enum.Material.Neon
+		)
+	end
 
 	-- Text on the side that looks at the fountain (the part's front, -Z).
 	-- Same stud look as the on-screen UI; unlit so it reads at night too.
 	local gui = Instance.new("SurfaceGui")
 	gui.Face = Enum.NormalId.Front
-	gui.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
-	gui.PixelsPerStud = 40
+	gui.SizingMode = Enum.SurfaceGuiSizingMode.FixedSize
+	gui.CanvasSize = Vector2.new(640, 540) -- all ten rows fit the 12.6x9 V3 source panel
 	gui.LightInfluence = 0
 	gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+	gui.Name = "FreeAPetRanking"
+	local existingGui = panel:FindFirstChild(gui.Name)
+	if existingGui then
+		existingGui:Destroy()
+	end
 	gui.Parent = panel
 	local body = UITheme.Panel(nil)
 	body.Size = UDim2.fromScale(1, 1)
@@ -151,6 +170,10 @@ local function buildBoard(): Model?
 		UITheme.FitText(value, 24)
 		value.Parent = frame
 		rows[i] = { frame = frame, badge = badge, rank = rank, name = name, value = value }
+	end
+	if sourcePanel then
+		board:Destroy() -- V3 uses the source frame; no generated duplicate geometry
+		return nil
 	end
 	board.Parent = Workspace:FindFirstChild("Map") or Workspace
 	return board

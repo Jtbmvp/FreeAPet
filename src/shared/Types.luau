@@ -1,5 +1,5 @@
 --!strict
--- Saved data shapes (schema version 1). Optional fields leave room for
+-- Saved data shapes (schema version 3). Optional fields leave room for
 -- mutations, cosmetics and multipliers: Profile:Reconcile() fills new
 -- template fields on old saves, and schemaVersion drives real migrations.
 
@@ -14,13 +14,20 @@ export type PetOrigin = {
 export type SavedAnimal = {
 	speciesId: string,
 	size: number, -- Config.Economy.sizeMin..sizeMax
-	growth: number, -- 0..1, only increases while loose
-	slot: number, -- base slot it lives in (loose animals keep the slot they left)
+	growth: number?, -- legacy input only; no clock-based growth
+	slot: number, -- display pad, or 0 in the persistent reserve
+	location: string?, -- Base | Team | Inventory after migration
+	legacyScaleFloor: number?,
+	legacyIncomeFloor: number?,
+	unavailableReason: string?, -- preserved, never replaced/deleted if its content is unavailable
+	teamOrder: number?, -- stable combat-ranked roster/follower order across rejoin
 	equipped: boolean?, -- in the battle team, following its owner
+	away: boolean?, -- out of the base (loose, carried, battling) at the last save: no offline income
 	origin: PetOrigin?, -- nil for pets caught before origins were recorded
 	level: number?, -- battle level (nil = 1)
 	xp: number?, -- towards the next level
 	hp: number?, -- current battle health (nil = full)
+	lastTradedAt: number?, -- last durable transfer; legacy unknown is blocked from trading
 	mutations: { string }?, -- post-prototype
 }
 
@@ -28,6 +35,41 @@ export type ResearchProgress = {
 	level: number, -- completed level
 	activeLevel: number?, -- level being researched
 	finishesAt: number?, -- os.time() timestamp
+	paidByRank: { [string]: number }?, -- actual cash charged, never estimated from config
+}
+
+export type MissionProgress = { progress: number, claimed: boolean? }
+export type RetiredResearch = {
+	progress: ResearchProgress,
+	refundStatus: string, -- PendingHistory | Refunded
+	refundedCash: number?,
+}
+
+export type MissionView = {
+	progress: number,
+	target: number,
+	claimed: boolean,
+	pending: boolean,
+	playerXp: number,
+	petXp: number,
+}
+
+export type ProgressionView = {
+	playerLevel: number,
+	currentXp: number,
+	xpToNext: number,
+	maxLevel: number,
+	researchRequired: number,
+	tradeRequired: number,
+	researchUnlocked: boolean,
+	tradeUnlocked: boolean,
+	missions: { [string]: MissionView },
+	pendingSave: boolean,
+	revision: number,
+	committedRevision: number,
+	sessionId: string?,
+	sequence: number?,
+	source: string?,
 }
 
 -- Index (collection): species the player has seen up close and caught.
@@ -47,6 +89,12 @@ export type PlayerData = {
 	trades: { day: number, count: number }, -- trades done today (day = os.time() // 86400)
 	bestIncome: number, -- highest Cash/s reached, for the global leaderboard
 	lastOnlineAt: number, -- os.time(), for offline income
+	playerTotalXp: number,
+	rewardRevision: number,
+	missions: { [string]: MissionProgress },
+	retiredResearch: { [string]: RetiredResearch },
+	starters: { choices: { string }, capsulesGranted: boolean },
+	commerce: { revision: number, receipts: { [string]: any } },
 	multipliers: { [string]: number }?, -- post-prototype paid passes
 }
 

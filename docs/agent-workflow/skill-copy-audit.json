@@ -1,0 +1,50 @@
+{
+  "roblox-game-pipeline": {
+    ".agents/skills": {
+      "same": true,
+      "files": 11,
+      "different": []
+    },
+    ".claude/skills": {
+      "same": true,
+      "files": 11,
+      "different": []
+    }
+  },
+  "studify": {
+    ".agents/skills": {
+      "same": true,
+      "files": 4,
+      "different": []
+    },
+    ".claude/skills": {
+      "same": true,
+      "files": 4,
+      "different": []
+    }
+  },
+  "roblox-ui-maker": {
+    ".agents/skills": {
+      "same": true,
+      "files": 53,
+      "different": []
+    },
+    ".claude/skills": {
+      "same": true,
+      "files": 53,
+      "different": []
+    }
+  },
+  "roblox-vfx": {
+    ".agents/skills": {
+      "same": true,
+      "files": 20,
+      "different": []
+    },
+    ".claude/skills": {
+      "same": true,
+      "files": 20,
+      "different": []
+    }
+  }
+}

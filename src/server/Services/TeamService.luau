@@ -1,9 +1,8 @@
 --!strict
--- Battle team: up to Config.Gameplay.team.maxEquipped pets walk behind their
--- owner. Equipped pets keep their base slot (they come back to it), earn no
--- cash and cannot be stolen. Equipping is a prompt on a base pet ("Equip",
--- key F) and "Send home" on a following pet, both shown only to the owner;
--- the tablet will replace these prompts later.
+-- Authoritative battle roster. Equipped pets keep their slots, earn no
+-- cash and cannot be stolen. Only the leader has a cosmetic follower;
+-- every equipped pet remains available to BattleService. Pets UI manages
+-- equipping and sending home (no interaction prompts on companions).
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -14,66 +13,64 @@ local AnimalService = require(script.Parent.AnimalService)
 local HomeService = require(script.Parent.HomeService)
 local NotifyService = require(script.Parent.NotifyService)
 local PlayerDataService = require(script.Parent.PlayerDataService)
+local FollowerPolicy = require(script.Parent.FollowerPolicy)
+local TeamPresentation = require(script.Parent.TeamPresentation)
+local ProgressionService = require(script.Parent.ProgressionService)
 
 type AnimalRecord = AnimalService.AnimalRecord
 
+local Guard = require(script.Parent.PlayerMutationGuard)
 local TeamService = {}
-
-local TICK_SECONDS = 0.25
--- Per team position: X = side (in pet widths), Y = distance back (x followDistance).
-local FORMATION = { Vector2.new(-1, 0.6), Vector2.new(1, 0.6), Vector2.new(-2, 1.3) }
 
 local teams: { [Player]: { AnimalRecord } } = {}
 local paused: { [Player]: boolean } = {} -- in a battle: BattleService places the pets
 
-local function setPrompt(
-	record: AnimalRecord,
-	name: string,
-	action: string,
-	key: Enum.KeyCode,
-	onTrigger: (Player) -> ()
-)
-	local root = record.model and record.model.PrimaryPart
-	if not root then
-		return
+local function refreshFollower(player: Player)
+	local team = teams[player] or {}
+	for _, record in team do
+		if paused[player] then
+			TeamPresentation.Release(record)
+		else
+			TeamPresentation.Stow(record)
+		end
 	end
-	local existing = root:FindFirstChild(name)
-	if existing then
-		existing:Destroy()
-	end
-	local prompt = Instance.new("ProximityPrompt")
-	prompt.Name = name
-	prompt.ActionText = action
-	prompt.ObjectText = Config.Species[record.speciesId].displayName
-	prompt.KeyboardKeyCode = key
-	prompt.HoldDuration = 0.3
-	prompt.MaxActivationDistance = 8 + AnimalService.Radius(record.model :: Model)
-	prompt.RequiresLineOfSight = false
-	prompt:SetAttribute("OwnerUserId", record.ownerUserId)
-	prompt.Parent = root
-	prompt.Triggered:Connect(onTrigger)
+	TeamPresentation.Show(player, if paused[player] then nil else FollowerPolicy.Select(team))
 end
 
-local function removePrompt(record: AnimalRecord, name: string)
-	local root = record.model and record.model.PrimaryPart
-	local prompt = root and root:FindFirstChild(name)
-	if prompt then
-		prompt:Destroy()
-	end
-end
-
--- Stops (or resumes) moving a player's team, e.g. during a battle.
+-- Hands all real models to the battle, or restores the cosmetic follower.
 function TeamService.SetPaused(player: Player, value: boolean)
 	paused[player] = if value then true else nil
+	refreshFollower(player)
 end
 
 function TeamService.GetTeam(player: Player): { AnimalRecord }
 	return table.clone(teams[player] or {})
 end
 
-function TeamService.Equip(player: Player, record: AnimalRecord, quiet: boolean?): boolean
+-- The team is locked during a battle (and its playback): fighters stay fighters.
+local function lockedInBattle(player: Player, quiet: boolean?): boolean
+	if player:GetAttribute("InBattle") ~= true then
+		return false
+	end
+	if not quiet then
+		NotifyService.Send(player, { text = "You can't change your team during a battle.", kind = "info" })
+	end
+	return true
+end
+
+function TeamService.Equip(player: Player, record: AnimalRecord, quiet: boolean?, internal: boolean?): boolean
+	if Guard.IsBusy(player) and not internal then
+		return false
+	end
 	local team = teams[player]
-	if not team or record.ownerUserId ~= player.UserId or record.state ~= "InBase" then
+	if
+		not team
+		or record.ownerUserId ~= player.UserId
+		or (record.state ~= "InBase" and record.state ~= "Inventory")
+	then
+		return false
+	end
+	if lockedInBattle(player, quiet) then
 		return false
 	end
 	if #team >= Config.Gameplay.team.maxEquipped then
@@ -85,79 +82,116 @@ function TeamService.Equip(player: Player, record: AnimalRecord, quiet: boolean?
 		end
 		return false
 	end
+	AnimalService.EnsureModel(record)
 	record.state = "Following"
 	table.insert(team, record)
-	removePrompt(record, "PickUpPrompt")
-	removePrompt(record, "EquipPrompt")
 	local root = record.model and record.model.PrimaryPart
 	local label = root and root:FindFirstChild("IncomeLabel") :: BillboardGui?
 	if label then
 		label.Enabled = false -- equipped pets earn nothing
 	end
-	setPrompt(record, "UnequipPrompt", "Send home", Enum.KeyCode.E, function(who)
-		if who == player then
-			TeamService.Unequip(player, record)
-		end
-	end)
-	local character = player.Character
-	local ownerRoot = character and character:FindFirstChild("HumanoidRootPart") :: BasePart?
-	if ownerRoot and record.model then
-		record.model:PivotTo(ownerRoot.CFrame * CFrame.new(0, 0, Config.Gameplay.team.followDistance))
-	end
+	refreshFollower(player)
 	HomeService.RefreshIncome(player)
+	HomeService.SaveCaught(player, record)
 	return true
 end
 
 function TeamService.Unequip(player: Player, record: AnimalRecord): boolean
+	if Guard.IsBusy(player) then
+		return false
+	end
 	local team = teams[player]
 	local index = team and table.find(team, record)
-	if not team or not index then
+	if not team or not index or lockedInBattle(player) then
 		return false
 	end
 	table.remove(team, index)
-	removePrompt(record, "UnequipPrompt")
-	HomeService.PlaceBack(player, record) -- back to its slot: wanders and earns again
+	TeamPresentation.Release(record)
+	if not HomeService.PlaceBack(player, record) then
+		table.insert(team, index :: number, record)
+		refreshFollower(player)
+		return false
+	end
+	refreshFollower(player)
+	HomeService.SaveCaught(player, record)
 	return true
 end
 
--- Walk each equipped pet to its spot behind the owner (a small V formation).
-local function follow(player: Player, team: { AnimalRecord })
-	local character = player.Character
-	local root = character and character:FindFirstChild("HumanoidRootPart") :: BasePart?
-	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
-	if not root or not humanoid then
-		return
+-- Internal batch operations; all input validation precedes presentation changes.
+function TeamService.Replace(player: Player, selected: { AnimalRecord }): boolean
+	if
+		not teams[player]
+		or player:GetAttribute("InBattle")
+		or #selected > Config.Gameplay.team.maxEquipped
+	then
+		return false
 	end
-	local settings = Config.Gameplay.team
-	for i, record in team do
-		local model = record.model
-		local petRoot = model and model.PrimaryPart
-		local petHumanoid = model and model:FindFirstChildOfClass("Humanoid")
-		if petRoot and petHumanoid then
-			-- Pets walk beside and behind the owner, never straight behind, so
-			-- they stay out of the camera's line; spacing grows with the pet.
-			local radius = AnimalService.Radius(model :: Model)
-			local slot = FORMATION[i] or FORMATION[#FORMATION]
-			local side = slot.X * (2 + radius)
-			local back = settings.followDistance * slot.Y + radius
-			local goal = (root.CFrame * CFrame.new(side, 0, back)).Position
-			local distance = (petRoot.Position - root.Position).Magnitude
-			if distance > settings.teleportDistance then
-				model:PivotTo(CFrame.new(goal + Vector3.new(0, 2, 0)) * root.CFrame.Rotation)
-			end
-			petHumanoid.WalkSpeed = math.max(humanoid.WalkSpeed * 1.15, 8)
-			if (petRoot.Position - goal).Magnitude > 2 then
-				petHumanoid:MoveTo(goal)
-			end
+	local seen = {}
+	for _, record in selected do
+		if
+			seen[record.id]
+			or record.ownerUserId ~= player.UserId
+			or (record.state ~= "InBase" and record.state ~= "Inventory" and record.state ~= "Following")
+		then
+			return false
 		end
+		seen[record.id] = true
+	end
+	for _, record in selected do
+		AnimalService.EnsureModel(record)
+	end
+	for _, record in teams[player] do
+		if not seen[record.id] then
+			TeamPresentation.Release(record)
+			HomeService.PlaceBack(player, record)
+		end
+	end
+	teams[player] = table.clone(selected)
+	for _, record in selected do
+		record.state = "Following"
+		local root = record.model and record.model.PrimaryPart
+		local label = root and root:FindFirstChild("IncomeLabel") :: BillboardGui?
+		if label then
+			label.Enabled = false
+		end
+	end
+	refreshFollower(player)
+	HomeService.RefreshIncome(player)
+	return true
+end
+
+function TeamService.DetachForSale(player: Player, record: AnimalRecord)
+	local team = teams[player]
+	local index = team and table.find(team, record)
+	if team and index then
+		table.remove(team, index)
+		TeamPresentation.Release(record)
+		record.state = "Inventory"
+		refreshFollower(player)
 	end
 end
 
 function TeamService.Start()
+	TeamPresentation.Start()
+	ProgressionService.OnPetChanged(function(player)
+		if not paused[player] then
+			TeamPresentation.Clear(player) -- the same leader may have grown
+			refreshFollower(player)
+		end
+	end)
 	-- After the base is rebuilt from the save, re-equip the saved team.
 	PlayerDataService.OnLoaded(function(player: Player, data: Types.PlayerData)
-		for id, saved in data.animals do
-			if saved.equipped then
+		local ids = {}
+		for id in data.animals do
+			table.insert(ids, id)
+		end
+		table.sort(ids, function(a, b)
+			local ao, bo = data.animals[a].teamOrder or math.huge, data.animals[b].teamOrder or math.huge
+			return if ao ~= bo then ao < bo else a < b
+		end)
+		for _, id in ids do
+			local saved = data.animals[id]
+			if saved.equipped and not saved.unavailableReason then
 				local record = AnimalService.Get(id)
 				if record then
 					TeamService.Equip(player, record, true)
@@ -173,6 +207,9 @@ function TeamService.Start()
 					and record.state == "Following"
 				then true
 				else nil
+			saved.teamOrder = if saved.equipped and record
+				then table.find(teams[player] or {}, record)
+				else nil
 		end
 	end)
 
@@ -185,19 +222,9 @@ function TeamService.Start()
 	end
 	-- The records themselves leave with HomeService (they keep their slot).
 	PlayerDataService.OnReleasing(function(player)
+		TeamPresentation.Forget(player, teams[player] or {})
 		teams[player] = nil
 		paused[player] = nil
-	end)
-
-	task.spawn(function()
-		while true do
-			task.wait(TICK_SECONDS)
-			for player, team in teams do
-				if #team > 0 and not paused[player] then
-					follow(player, team)
-				end
-			end
-		end
 	end)
 end
 

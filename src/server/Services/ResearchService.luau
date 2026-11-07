@@ -4,13 +4,7 @@
 -- the save, so research keeps running while the player is offline. When a
 -- timer runs out the level is written down and its effect applied.
 --
--- Effects: player attributes read by other services (CarryCapacity,
--- IncomeMultiplier, GrowthMultiplier, Protection_<HazardId>), the
--- character's WalkSpeed, and values read straight from the save through
--- ResearchMath (releaseShieldSeconds, offlineIncomePercent, maxLoose,
--- researchTimeMultiplier).
--- The client sees progress through attributes: Research_<NodeId> = level,
--- ResearchActive = node id, ResearchFinishesAt = os.time() timestamp.
+-- Effects apply independently of the level gates on NEW requests.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -20,6 +14,7 @@ local Format = require(ReplicatedStorage.Shared.Format)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local ResearchMath = require(ReplicatedStorage.Shared.ResearchMath)
 local Types = require(ReplicatedStorage.Shared.Types)
+local ProgressionMath = require(ReplicatedStorage.Shared.ProgressionMath)
 local HomeService = require(script.Parent.HomeService)
 local NotifyService = require(script.Parent.NotifyService)
 local PlayerDataService = require(script.Parent.PlayerDataService)
@@ -50,13 +45,6 @@ local function applyAll(player: Player, data: Types.PlayerData)
 		ResearchMath.Value(progress, "walkSpeed", Config.Gameplay.player.walkSpeed, now)
 	)
 	player:SetAttribute("IncomeMultiplier", ResearchMath.Value(progress, "incomeMultiplier", 1, now))
-	player:SetAttribute("GrowthMultiplier", ResearchMath.Value(progress, "growthMultiplier", 1, now))
-	for hazardId in Config.Exposure.hazards do
-		player:SetAttribute(
-			`Protection_{hazardId}`,
-			ResearchMath.Value(progress, `protection.{hazardId}`, 1, now)
-		)
-	end
 	applyWalkSpeed(player, player.Character)
 	HomeService.RefreshIncome(player)
 
@@ -73,7 +61,7 @@ local function completeDue(data: Types.PlayerData): { string }
 	local now = os.time()
 	local finished = {}
 	for id, entry in data.research do
-		if entry.activeLevel and entry.finishesAt and entry.finishesAt <= now then
+		if Config.Research[id] and entry.activeLevel and entry.finishesAt and entry.finishesAt <= now then
 			entry.level = entry.activeLevel
 			entry.activeLevel = nil
 			entry.finishesAt = nil
@@ -108,7 +96,7 @@ local function start(player: Player, nodeId: unknown)
 
 	local node = Config.Research[nodeId]
 	local data = PlayerDataService.Get(player)
-	if not node or not data then
+	if not node or not data or not PlayerDataService.IsReady(player) then
 		return
 	end
 	local time = os.time()
@@ -118,6 +106,17 @@ local function start(player: Player, nodeId: unknown)
 	local nextLevel = node.levels[level + 1]
 	if not nextLevel then
 		return -- already at max level
+	end
+
+	local playerLevel = ProgressionMath.PlayerState(data.playerTotalXp)
+	local required = ProgressionMath.ResearchLevel(nodeId, level + 1)
+	if playerLevel < required then
+		NotifyService.Send(player, {
+			text = `Player level {required} is required for this research.`,
+			kind = "info",
+			icon = "locked",
+		})
+		return
 	end
 
 	local running = 0
@@ -151,6 +150,8 @@ local function start(player: Player, nodeId: unknown)
 	end
 
 	entry.level = level -- a finished-but-unwritten level counts
+	entry.paidByRank = entry.paidByRank or {}
+	entry.paidByRank[tostring(level + 1)] = nextLevel.cost
 	entry.activeLevel = level + 1
 	local duration = ResearchMath.Duration(progress, nodeId, level + 1, time)
 	entry.finishesAt = time + duration
@@ -184,7 +185,7 @@ function ResearchService.Start()
 			task.wait(1)
 			for _, player in Players:GetPlayers() do
 				local data = PlayerDataService.Get(player)
-				if data then
+				if data and PlayerDataService.IsReady(player) then
 					local finished = completeDue(data)
 					if #finished > 0 then
 						applyAll(player, data)

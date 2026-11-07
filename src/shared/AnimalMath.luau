@@ -1,41 +1,34 @@
 --!strict
--- Formulas about an individual animal, shared by server and client UI.
-
 local Config = require(script.Parent.Config)
-local Economy = require(script.Parent.Config.Economy)
+local ProgressionMath = require(script.Parent.ProgressionMath)
 
 local AnimalMath = {}
 
-function AnimalMath.StageFor(growth: number): Economy.GrowthStage
-	local current = Config.Economy.growthStages[1]
-	for _, stage in Config.Economy.growthStages do
-		if growth >= stage.minProgress then
-			current = stage
-		end
-	end
-	return current
+function AnimalMath.StageFor(level: number)
+	return ProgressionMath.Stage(level)
 end
 
--- Visual scale for a growth value, interpolated between the stage scales
--- so a loose animal visibly grows a little every second.
-function AnimalMath.ScaleFor(growth: number): number
-	local stages = Config.Economy.growthStages
-	for index = #stages, 2, -1 do
-		local from, to = stages[index - 1], stages[index]
-		if growth >= from.minProgress then
-			local alpha = math.clamp((growth - from.minProgress) / (to.minProgress - from.minProgress), 0, 1)
-			return from.scale + (to.scale - from.scale) * alpha
-		end
-	end
-	return stages[1].scale
+function AnimalMath.ScaleFor(level: number, legacyScaleFloor: number?): number
+	return math.max(ProgressionMath.Scale(level), legacyScaleFloor or 0)
 end
 
--- Value per second = biome base value × rarity multiplier × size × stage income factor
-function AnimalMath.ValuePerSecond(speciesId: string, size: number, growth: number): number
+function AnimalMath.IncomeFactor(level: number, legacyIncomeFloor: number?): number
+	return math.max(ProgressionMath.Stage(level).incomeFactor, legacyIncomeFloor or 0)
+end
+
+function AnimalMath.ValuePerSecond(
+	speciesId: string,
+	size: number,
+	level: number,
+	legacyIncomeFloor: number?
+): number
 	local species = Config.Species[speciesId]
-	local biome = Config.Biomes[species.biome]
+	local biome = species.biome and Config.Biomes[species.biome]
 	local rarity = Config.Rarities[species.rarity]
-	return biome.baseValue * rarity.multiplier * size * AnimalMath.StageFor(growth).incomeFactor
+	return (if biome then biome.baseValue else 1)
+		* rarity.multiplier
+		* size
+		* AnimalMath.IncomeFactor(level, legacyIncomeFloor)
 end
 
 return AnimalMath

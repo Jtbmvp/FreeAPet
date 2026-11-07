@@ -43,6 +43,9 @@ local function row(parent: Instance, order: number, iconKey: string, iconSize: n
 end
 
 function CashHud.Start()
+	if Config.UI.userHudEnabled then
+		return
+	end
 	local player = Players.LocalPlayer
 
 	local gui = Instance.new("ScreenGui")

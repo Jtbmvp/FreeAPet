@@ -1,4 +1,7 @@
 --!strict
+-- Plays legacy Motor6Ds and gated original Bone.Transform clips on this client.
+-- Original assets require provenance, measured ImportedStudsPerMetre and explicit
+-- OriginalPetPlaybackEnabled after pilot inspection. No asset insertion/activation here.
 -- Plays the pets' clips on this client by driving the Motor6Ds that
 -- AnimalFactory builds (data in Shared.PetAnimations). Purely visual: the
 -- server never animates and nothing is replicated. A pet walks while it
@@ -13,7 +16,28 @@ local Workspace = game:GetService("Workspace")
 
 local PetAnimations = require(ReplicatedStorage.Shared.PetAnimations)
 
-type Rig = PetAnimations.Rig
+local Contract = require(ReplicatedStorage.Shared.OriginalPets.Contract)
+local Clips = ReplicatedStorage.Shared.OriginalPets.Clips
+
+type Rig = {
+	fps: number,
+	joints: { { name: string, parent: string } },
+	clips: { [string]: PetAnimations.Clip },
+	stageScale: { [string]: number }?,
+}
+local originalRigs: { [string]: Rig } = {}
+local function originalRig(speciesId: string): Rig?
+	if originalRigs[speciesId] then
+		return originalRigs[speciesId]
+	end
+	local module = Clips:FindFirstChild(speciesId)
+	if not module or not module:IsA("ModuleScript") then
+		return nil
+	end
+	local rig = (require :: any)(module) :: Rig
+	originalRigs[speciesId] = rig
+	return rig
+end
 
 local PetAnimator = {}
 
@@ -27,7 +51,13 @@ type Pet = {
 	model: Model,
 	root: BasePart,
 	rig: Rig,
-	motors: { [string]: Motor6D },
+	motors: { [string]: Motor6D | Bone },
+	stage: string?,
+	studsPerMetre: number,
+	holdLast: boolean,
+	poseState: any,
+	idleSeconds: number,
+	nextFidget: number,
 	clip: string,
 	time: number,
 	fromClip: string?,
@@ -35,6 +65,7 @@ type Pet = {
 	fade: number, -- 0..1, weight of `clip` while fading in
 	once: string?, -- one-shot clip playing instead of Idle/Walk
 	frozenUntil: number, -- os.clock(): hold the pose until then (hitstop)
+	suspended: boolean,
 }
 
 local pets: { [Model]: Pet } = {}
@@ -51,7 +82,7 @@ local function sample(rig: Rig, clipName: string, time: number, joint: string, s
 	local position = time * rig.fps
 	local i0 = math.floor(position)
 	local alpha = position - i0
-	local last = clip.frames - 1
+	local last = math.max(1, clip.frames - 1)
 	local i1 = i0 + 1
 	if clip.loop then
 		i0 %= last
@@ -80,50 +111,131 @@ local function sample(rig: Rig, clipName: string, time: number, joint: string, s
 	return CFrame.new(px, py, pz, x, y, z, w)
 end
 
-local function track(model: Instance)
+local function track(model: Instance): boolean
 	if not model:IsA("Model") then
-		return
+		return false
 	end
 	local speciesId = model:GetAttribute("SpeciesId")
-	local rig = typeof(speciesId) == "string" and PetAnimations.Get(speciesId) or nil
 	local root = model.PrimaryPart
-	if not rig or not root then
-		return
+	if typeof(speciesId) ~= "string" or not root then
+		return false
 	end
-	local motors = {}
+	local key = model:GetAttribute("PetVariantKey")
+	local stage: string? = nil
+	local importedScale = 1
+	local rig: Rig? = nil
+	local variant = if typeof(key) == "string" then Contract.Get(key) else nil
+	if key ~= nil then
+		if
+			not variant
+			or variant.runtimeSpeciesId ~= speciesId
+			or model:GetAttribute("ArtSourceSha256") ~= variant.sourceSha256
+			or model:GetAttribute("OriginalPetPlaybackEnabled") ~= true
+		then
+			return false
+		end
+		local factor = model:GetAttribute("ImportedStudsPerMetre")
+		if typeof(factor) ~= "number" or factor ~= factor or factor <= 0 or factor == math.huge then
+			return false
+		end
+		importedScale, stage = factor, variant.stage
+		rig = originalRig(speciesId)
+	else
+		rig = PetAnimations.Get(speciesId) :: any
+	end
+	if not rig then
+		return false
+	end
+	local motors: { [string]: Motor6D | Bone } = {}
+	local boneCount = 0
 	for _, descendant in model:GetDescendants() do
-		if descendant:IsA("Motor6D") then
-			motors[descendant.Name] = descendant
+		if stage and (descendant:IsA("LuaSourceContainer") or descendant:IsA("PackageLink")) then
+			return false
+		end
+		if stage and descendant:IsA("Animator") and #descendant:GetPlayingAnimationTracks() > 0 then
+			return false
+		end
+		if (stage and descendant:IsA("Bone")) or (not stage and descendant:IsA("Motor6D")) then
+			if motors[descendant.Name] then
+				return false
+			end
+			motors[descendant.Name] = descendant :: any
+			boneCount += 1
 		end
 	end
 	if next(motors) == nil then
-		return
+		return false
+	end
+	if variant then
+		if boneCount ~= #variant.bones then
+			return false
+		end
+		for name, expectedParent in variant.boneParents do
+			local bone = motors[name]
+			local parent: Instance? = bone and bone.Parent
+			while parent and parent ~= model and not parent:IsA("Bone") do
+				parent = parent.Parent
+			end
+			if not parent or not parent:IsA("Bone") or parent.Name ~= expectedParent then
+				return false
+			end
+		end
+	end
+	for _, joint in rig.joints do
+		if not motors[joint.name] then
+			return false
+		end -- retry partial replication
 	end
 	pets[model] = {
 		model = model,
 		root = root,
 		rig = rig,
 		motors = motors,
+		stage = stage,
+		studsPerMetre = importedScale,
+		holdLast = false,
+		poseState = nil,
+		idleSeconds = 0,
+		nextFidget = math.random(10, 14),
 		clip = "Idle",
-		time = math.random() * 2, -- desync idles so a group does not breathe in step
+		time = math.random() * 2,
 		fromClip = nil,
 		fromTime = 0,
 		fade = 1,
 		once = nil,
 		frozenUntil = 0,
+		suspended = false,
 	}
+	return true
 end
 
-local function wantedClip(pet: Pet): (string, number)
-	if pet.once then
-		return pet.once, 1
+local function clipFor(pet: Pet, name: string): string
+	local staged = if pet.stage then `{name}_{pet.stage}` else name
+	return if pet.rig.clips[staged] then staged else name
+end
+local function stageRate(pet: Pet, name: string): number
+	if name == "Walk" then
+		return 1
 	end
+	return if pet.stage == "Baby" then 1.15 elseif pet.stage == "Juvenile" then 1.07 else 1
+end
+local function motionClip(pet: Pet): (string, number)
 	local root = pet.root
 	if root:FindFirstChild("CarryWeld") then
-		return "Idle", 1
+		return if pet.rig.clips.Carried then "Carried" else "Idle", 1
+	end
+	if pet.model:GetAttribute("State") == "Battling" and pet.rig.clips.BattleIdle then
+		return "BattleIdle", 1
+	end
+	-- Sleep is opt-in presentation only; proximity policy remains outside this player.
+	if pet.model:GetAttribute("PetSleeping") == true and pet.rig.clips.Sleep then
+		return clipFor(pet, "Sleep"), 1
 	end
 	local velocity = root.AssemblyLinearVelocity
-	local speed = Vector3.new(velocity.X, 0, velocity.Z).Magnitude
+	local followerSpeed = pet.model:GetAttribute("FollowerSpeed")
+	local speed = if typeof(followerSpeed) == "number"
+		then followerSpeed
+		else Vector3.new(velocity.X, 0, velocity.Z).Magnitude
 	local walk = pet.rig.clips.Walk
 	if speed < MOVING_SPEED or not walk then
 		return "Idle", 1
@@ -131,10 +243,40 @@ local function wantedClip(pet: Pet): (string, number)
 	local height = math.max(root.Size.Y, 0.5)
 	return "Walk", math.clamp(speed * walk.duration / (STRIDE * height), 0.5, 3)
 end
+local function wantedClip(pet: Pet): (string, number)
+	local motion, rate = motionClip(pet)
+	if pet.holdLast and pet.model:GetAttribute("State") ~= pet.poseState then
+		pet.once = nil
+		pet.holdLast = false
+	end
+	if pet.once == "Fidget" and motion ~= "Idle" then
+		pet.once = nil
+	end
+	if pet.once then
+		return pet.once, stageRate(pet, pet.once)
+	end
+	return motion, rate * stageRate(pet, motion)
+end
 
 local function step(pet: Pet, dt: number)
 	if os.clock() < pet.frozenUntil then
 		dt = 0
+	end
+	local motion = motionClip(pet)
+	if
+		motion == "Idle"
+		and not pet.once
+		and pet.rig.clips.Fidget
+		and Workspace.CurrentCamera
+		and (pet.root.Position - Workspace.CurrentCamera.CFrame.Position).Magnitude < MID
+	then
+		pet.idleSeconds += dt
+		if pet.idleSeconds >= pet.nextFidget then
+			pet.once = "Fidget"
+			pet.idleSeconds, pet.nextFidget = 0, math.random(16, 26)
+		end
+	elseif motion ~= "Idle" then
+		pet.idleSeconds = 0
 	end
 	local clip, rate = wantedClip(pet)
 	if clip ~= pet.clip then
@@ -145,7 +287,11 @@ local function step(pet: Pet, dt: number)
 	if pet.once and pet.clip == pet.once then
 		local once = pet.rig.clips[pet.once]
 		if not once or pet.time >= once.duration then
-			pet.once = nil -- back to Idle/Walk (with the usual fade)
+			if pet.holdLast and once then
+				pet.time = once.duration
+			else
+				pet.once = nil -- back to motion (with the usual fade)
+			end
 		end
 	end
 	if pet.fromClip then
@@ -156,11 +302,19 @@ local function step(pet: Pet, dt: number)
 		end
 	end
 
+	local stageScale = pet.rig.stageScale
 	local scale = pet.model:GetScale()
+		* pet.studsPerMetre
+		* (if pet.stage and stageScale then stageScale[pet.stage] or 1 else 1)
 	for joint, motor in pet.motors do
 		local pose = sample(pet.rig, pet.clip, pet.time, joint, scale)
 		if pet.fromClip then
 			pose = sample(pet.rig, pet.fromClip, pet.fromTime, joint, scale):Lerp(pose, pet.fade)
+		end
+		-- Only use a measured rotation basis if pilot G2 found differing axes.
+		local basis = if motor:IsA("Bone") then motor:GetAttribute("BonePoseBasis") else nil
+		if typeof(basis) == "CFrame" then
+			pose = basis.Rotation:Inverse() * pose * basis.Rotation
 		end
 		motor.Transform = pose
 	end
@@ -169,14 +323,38 @@ end
 -- Plays a one-shot clip on a pet if its rig has it. Returns the clip's
 -- length and its markers ({ impact = seconds, ... }), or nil when the clip
 -- doesn't exist yet (the caller then animates procedurally).
-function PetAnimator.PlayOnce(model: Model, clipName: string): (number?, { [string]: number }?)
+function PetAnimator.PlayOnce(
+	model: Model,
+	clipName: string,
+	holdLast: boolean?
+): (number?, { [string]: number }?)
+	if not pets[model] then
+		track(model)
+	end
 	local pet = pets[model]
-	local clip = pet and pet.rig.clips[clipName]
-	if not pet or not clip then
+	if not pet or (pet.stage and model:GetAttribute("OriginalPetPlaybackEnabled") ~= true) then
 		return nil, nil
 	end
-	pet.once = clipName
-	return clip.duration, clip.markers
+	local selected = clipFor(pet, clipName)
+	local clip = pet.rig.clips[selected]
+	if not clip then
+		return nil, nil
+	end
+	pet.once = selected
+	pet.holdLast = holdLast == true or clipName == "Faint"
+	pet.poseState = model:GetAttribute("State")
+	-- Restart repeated same-name attacks rather than inheriting their old elapsed time.
+	pet.fromClip, pet.fromTime = pet.clip, pet.time
+	pet.clip, pet.time, pet.fade = selected, 0, 0
+	local rate = stageRate(pet, selected)
+	local markers: { [string]: number }? = nil
+	if clip.markers then
+		markers = {}
+		for name, seconds in clip.markers do
+			(markers :: { [string]: number })[name] = seconds / rate
+		end
+	end
+	return clip.duration / rate, markers
 end
 
 -- Holds a pet's current pose for `seconds` (hitstop).
@@ -189,23 +367,77 @@ end
 
 function PetAnimator.Start()
 	local animals = Workspace:WaitForChild("Animals")
-	animals.ChildAdded:Connect(function(child)
-		-- Children stream in after the model itself.
-		task.defer(track, child)
-	end)
+	local pending: { [Instance]: { RBXScriptConnection } } = {}
+	local function stopWatching(child: Instance)
+		for _, connection in pending[child] or {} do
+			connection:Disconnect()
+		end
+		pending[child] = nil
+	end
+	local function watch(child: Instance)
+		if not child:IsA("Model") then
+			return
+		end
+		local queued = false
+		local function retry()
+			if queued then
+				return
+			end
+			queued = true
+			task.defer(function()
+				queued = false
+				if child.Parent == animals and track(child) then
+					stopWatching(child)
+				end
+			end)
+		end
+		pending[child] = {
+			child.DescendantAdded:Connect(retry),
+			child:GetPropertyChangedSignal("PrimaryPart"):Connect(retry),
+			child:GetAttributeChangedSignal("SpeciesId"):Connect(retry),
+			child:GetAttributeChangedSignal("PetVariantKey"):Connect(retry),
+			child:GetAttributeChangedSignal("ArtSourceSha256"):Connect(retry),
+			child:GetAttributeChangedSignal("ImportedStudsPerMetre"):Connect(retry),
+			child:GetAttributeChangedSignal("OriginalPetPlaybackEnabled"):Connect(retry),
+		}
+		retry() -- wait for late root, species and joints without polling tasks
+	end
+	animals.ChildAdded:Connect(watch)
 	animals.ChildRemoved:Connect(function(child)
+		stopWatching(child)
 		pets[child :: Model] = nil
 		skipped[child :: Model] = nil
 	end)
 	for _, child in animals:GetChildren() do
-		track(child)
+		watch(child)
 	end
 
 	local frame = 0
 	RunService.PreSimulation:Connect(function(dt)
 		frame += 1
-		local camera = Workspace.CurrentCamera.CFrame.Position
+		local currentCamera = Workspace.CurrentCamera
+		if not currentCamera then
+			return
+		end
+		local camera = currentCamera.CFrame.Position
 		for model, pet in pets do
+			if pet.stage and model:GetAttribute("OriginalPetPlaybackEnabled") ~= true then
+				if not pet.suspended then
+					for _, joint in pet.motors do
+						joint.Transform = CFrame.identity
+					end
+					pet.once, pet.fromClip, pet.holdLast = nil, nil, false
+					pet.clip, pet.time = "Idle", 0
+				end
+				pet.suspended = true
+				skipped[model] = nil
+				continue
+			end
+			if pet.suspended then
+				pets[model] = nil
+				track(model) -- revalidate calibration/provenance after a paused pilot
+				continue
+			end
 			local distance = (pet.root.Position - camera).Magnitude
 			if distance < FAR then
 				if distance < MID or frame % 2 == 0 then

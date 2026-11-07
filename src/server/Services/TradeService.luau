@@ -1,25 +1,17 @@
 --!strict
--- Trading pets between two players in the same server (OPEN #5, decided):
---   1. A asks B (tablet > Trade); B accepts from the notification.
---   2. Both add base pets to their offer. Any change clears both "Ready"
---      and "Confirm" marks.
---   3. Both press Ready, then both press Confirm: a countdown starts; any
---      change or cancel stops it.
---   4. When it ends the server checks everything again (owners, pets still
---      in the base, room in both bases, daily limit) and swaps the pets.
--- Accounts younger than minAccountAgeDays can't trade (not in Studio).
--- The client only sends intents ("TradeRequest", "TradeRespond",
--- "TradeAction") and shows "TradeUpdate".
+-- Trade offer/confirmation state machine; actual transfers are disabled.
+-- Requests and responses are validated/rate-limited; repeated Confirm is
+-- idempotent. Even with Gameplay.trade.enabled flipped, execute cannot move
+-- value or announce success until a durable two-profile coordinator exists.
+-- See build/coder-offline-2026-11-04/HANDOFF.md for the remaining recovery gate.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local RunService = game:GetService("RunService")
 
 local Config = require(ReplicatedStorage.Shared.Config)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
-local Types = require(ReplicatedStorage.Shared.Types)
+local TradePolicy = require(script.Parent.TradePolicy)
 local AnimalService = require(script.Parent.AnimalService)
-local HomeService = require(script.Parent.HomeService)
 local NotifyService = require(script.Parent.NotifyService)
 local PlayerDataService = require(script.Parent.PlayerDataService)
 
@@ -40,34 +32,26 @@ local TradeService = {}
 local sessions: { [Player]: Session } = {}
 local requests: { [Player]: { [Player]: number } } = {} -- target -> requester -> expires (os.clock)
 local lastActionAt: { [Player]: number } = {}
+local lastRespondAt: { [Player]: number } = {}
+local lastRequestAt: { [Player]: number } = {}
+local REQUEST_COOLDOWN = 2 -- seconds between requests from one player, to anyone
 
 local function settings()
 	return Config.Gameplay.trade
 end
 
-local function today(): number
-	return os.time() // 86400
-end
-
-local function tradesLeft(data: Types.PlayerData): number
-	if data.trades.day ~= today() then
-		data.trades.day = today()
-		data.trades.count = 0
-	end
-	return settings().maxPerDay - data.trades.count
-end
-
 -- Why this player can't trade right now, or nil.
 local function blocker(player: Player): string?
 	local data = PlayerDataService.Get(player)
-	if not data then
+	if not data or not PlayerDataService.IsReady(player) then
 		return "Your save is still loading."
 	end
-	if not RunService:IsStudio() and player.AccountAge < settings().minAccountAgeDays then
-		return `Accounts need to be {settings().minAccountAgeDays} days old to trade.`
+	if not settings().enabled then
+		return "Trading is unavailable while save safety is being verified."
 	end
-	if tradesLeft(data) <= 0 then
-		return "You reached today's trade limit."
+	local reason = TradePolicy.PlayerReason(data, player.AccountAge, os.time())
+	if reason then
+		return reason
 	end
 	if player:GetAttribute("InBattle") then
 		return "Finish your battle first."
@@ -89,7 +73,6 @@ local function petView(id: string)
 		speciesId = record.speciesId,
 		level = record.level,
 		size = record.size,
-		growth = record.growth,
 	}
 end
 
@@ -142,75 +125,44 @@ end
 local function tradable(player: Player, id: string): AnimalRecord?
 	local record = AnimalService.Get(id)
 	if record and record.ownerUserId == player.UserId and record.state == "InBase" then
+		local data = PlayerDataService.Get(player)
+		local reason = data and TradePolicy.PetReason(data, data.animals[id], record.speciesId, os.time())
+		if not data or reason then
+			NotifyService.Send(player, { text = reason or "Your save is still loading.", kind = "info" })
+			return nil
+		end
 		return record
 	end
 	return nil
 end
 
 local function execute(session: Session)
-	local a, b = session.players[1], session.players[2]
-	-- Check everything again: anything off cancels the trade, nothing moves.
-	local records: { [Player]: { AnimalRecord } } = { [a] = {}, [b] = {} }
-	for _, player in session.players do
-		local reason = blocker(player)
-		if reason or not player.Parent then
-			close(session, reason or "The other player left.")
-			return
-		end
-		for _, id in session.offers[player] do
-			local record = tradable(player, id)
-			if not record then
-				close(session, "A pet in the trade is no longer in its base. Trade cancelled.")
-				return
-			end
-			table.insert(records[player], record)
-		end
-	end
-	for _, player in session.players do
-		local other = otherOf(session, player)
-		local room = HomeService.FreeSlots(other) + #records[other]
-		if room < #records[player] then
-			close(session, `{other.DisplayName}'s base has no room for the pets. Trade cancelled.`)
-			return
-		end
-	end
-	if #records[a] == 0 and #records[b] == 0 then
-		close(session, "Nothing to trade.")
-		return
-	end
+	-- SEC-TRADE-01/02: there is NO safe two-profile commit implementation.
+	-- This unconditional fence cannot be bypassed by flipping a feature flag.
+	-- No ownership mutation, save enqueue or success notification is permitted.
+	close(session, "Trading is unavailable until durable transfer recovery is verified.")
+end
 
-	-- Swap: everything leaves both bases first, then moves in.
-	for _, player in session.players do
-		for _, record in records[player] do
-			HomeService.GiveAway(player, record)
-		end
-	end
-	for _, player in session.players do
-		local other = otherOf(session, player)
-		for _, record in records[player] do
-			HomeService.Receive(other, record)
-		end
-	end
-	for _, player in session.players do
-		local data = PlayerDataService.Get(player) :: Types.PlayerData
-		tradesLeft(data)
-		data.trades.count += 1
-		PlayerDataService.SaveNow(player)
-	end
-	close(session, "Trade complete!")
-	for _, player in session.players do
-		NotifyService.Send(player, {
-			text = `Trade with {otherOf(session, player).DisplayName} complete!`,
-			kind = "success",
-			icon = "success",
-		})
-	end
+function TradeService.IsTrading(player: Player): boolean
+	return sessions[player] ~= nil
 end
 
 local function onRequest(player: Player, targetUserId: unknown)
-	if typeof(targetUserId) ~= "number" or sessions[player] then
+	if
+		typeof(targetUserId) ~= "number"
+		or targetUserId ~= targetUserId
+		or targetUserId <= 0
+		or targetUserId == math.huge
+		or targetUserId % 1 ~= 0
+		or sessions[player]
+	then
 		return
 	end
+	local now = os.clock()
+	if now - (lastRequestAt[player] or -math.huge) < REQUEST_COOLDOWN then
+		return
+	end
+	lastRequestAt[player] = now
 	local target = Players:GetPlayerByUserId(targetUserId)
 	if not target or target == player then
 		return
@@ -239,10 +191,25 @@ local function onRequest(player: Player, targetUserId: unknown)
 end
 
 local function onRespond(player: Player, requesterUserId: unknown)
+	local now = os.clock()
+	if now - (lastRespondAt[player] or -math.huge) < 1 then
+		return
+	end
+	lastRespondAt[player] = now
+	if
+		typeof(requesterUserId) ~= "string"
+		or #requesterUserId > 20
+		or not string.match(requesterUserId, "^%d+$")
+	then
+		return
+	end
 	local requesterId = tonumber(requesterUserId)
+	if not requesterId or requesterId <= 0 or requesterId == math.huge or requesterId % 1 ~= 0 then
+		return
+	end
 	local requester = requesterId and Players:GetPlayerByUserId(requesterId)
 	local pending = requests[player]
-	if not requester or not pending or (pending[requester] or 0) < os.clock() then
+	if not requester or not pending or (pending[requester] or -math.huge) <= now then
 		NotifyService.Send(player, { text = "That trade request expired.", kind = "info" })
 		return
 	end
@@ -254,7 +221,15 @@ local function onRespond(player: Player, requesterUserId: unknown)
 	for _, who in { player, requester } do
 		local reason = blocker(who)
 		if reason then
-			NotifyService.Send(player, { text = reason, kind = "info" })
+			-- The reason is about `who`: they get it; the other side only learns
+			-- that the trade can't start.
+			NotifyService.Send(who, { text = reason, kind = "info" })
+			if who ~= player then
+				NotifyService.Send(
+					player,
+					{ text = `{who.DisplayName} can't trade right now.`, kind = "info" }
+				)
+			end
 			return
 		end
 	end
@@ -287,7 +262,7 @@ local function onAction(player: Player, action: unknown)
 
 	if kind == "add" or kind == "remove" then
 		local id = (action :: any).id
-		if typeof(id) ~= "string" then
+		if typeof(id) ~= "string" or #id == 0 or #id > 128 then
 			return
 		end
 		local index = table.find(offer, id)
@@ -305,6 +280,7 @@ local function onAction(player: Player, action: unknown)
 		push(session, nil)
 	elseif kind == "ready" then
 		session.ready[player] = not session.ready[player]
+		session.version += 1 -- cancels a running countdown
 		session.confirmed = {}
 		session.countdownEndsAt = nil
 		push(session, nil)
@@ -313,12 +289,20 @@ local function onAction(player: Player, action: unknown)
 		if not (session.ready[player] and session.ready[other]) then
 			return
 		end
+		if session.confirmed[player] then
+			return
+		end -- repeated Confirm preserves the shown deadline
 		session.confirmed[player] = true
 		if session.confirmed[other] then
 			session.countdownEndsAt = now + settings().countdownSeconds
 			local version = session.version
 			task.delay(settings().countdownSeconds, function()
-				if not session.ended and session.version == version and session.countdownEndsAt then
+				if
+					not session.ended
+					and session.version == version
+					and session.countdownEndsAt
+					and os.clock() >= session.countdownEndsAt
+				then
 					execute(session)
 				end
 			end)
@@ -340,6 +324,11 @@ function TradeService.Start()
 		end
 		requests[player] = nil
 		lastActionAt[player] = nil
+		lastRequestAt[player] = nil
+		lastRespondAt[player] = nil
+		for _, pending in requests do
+			pending[player] = nil
+		end
 	end)
 end
 

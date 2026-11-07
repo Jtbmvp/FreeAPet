@@ -4,6 +4,7 @@ Registo das decisões tomadas fora do brief (ou que o alteram). O brief original
 
 | Data | Decisão | Porquê |
 |---|---|---|
+| 2026-11-05 | Reorganização de agentes: Atlas coordena/pipeline; Terra mundo/studify; Pixel arte+VFX/studify; Nova UI/ui-maker; Coder gameplay; Sentinel QA com evidências. Fonte completa RoClicks em tools/roclicks-skills; leitura por necessidade, exclusividade Studio e ownership por ficheiro. Nenhuma alteração de mecânicas autorizada nesta tarefa; aprovação visual final do Chefe. | Pedido explícito do Chefe; qualidade visual e redução de tokens/planeamento. Backups e matriz manual Codync em docs/agent-workflow/. |
 | 2026-10-26 | Os modelos dos animais são feitos pelo developer (Claude Design / Blender) e entregues depois. Até lá usam-se modelos placeholder. | Em vez de animais procedurais com Parts. O código só conhece `Species.modelName`, por isso trocar a arte não mexe em código. |
 | 2026-10-26 | Estilo de arte: pets "chunky" blocky com textura de studs. | Referência enviada pelo developer. |
 | 2026-10-26 | Persistence (DataStore) passa para antes da Exposure (M4). | O esquema de dados afeta tudo; proteção contra perda e sessões duplicadas é difícil de acrescentar tarde. |
@@ -100,3 +101,34 @@ Registo das decisões tomadas fora do brief (ou que o alteram). O brief original
 | 2026-10-29 | Do Figma para o jogo: "lábio" 3D em todos os botões stud e do menu (`UITheme.Lip`: faixa mais escura em baixo + brilho fino em cima; acompanha o `Recolor`, p. ex. cinzento quando desativado); chip dourado "Lv" nos cartões de vida da batalha (o nível saiu do nome); pontos da equipa por baixo da barra de vida; mensagem da batalha numa cápsula escura semitransparente. | Melhorias do ficheiro Figma aprovadas pelo developer. |
 | 2026-10-29 | "Show pets" (botão na HUD por cima do menu, verde ON / cinzento OFF): em OFF esconde, só para ti, os pets de **outros jogadores** que estão na base deles ou a segui-los (`State` InBase/Following); pets selvagens e soltos aparecem sempre (são os do jogo), e os teus também. O servidor publica `State` em cada modelo (atributo, 2×/s). Local, não grava. | Pedido do developer (o atalho "Pet labels" do Figma passa a "Show pets"); a definição exata é proposta do Claude. |
 | 2026-10-29 | UI v2.1 no Figma (página "UI v2" de [Free a Pet! — UI](https://www.figma.com/design/Z8bKq1wH7ahzME1RR8UQzz)), no estilo das referências do developer: menu com 8 mosaicos (Pets, Index, Research, Trade, **Items, Shop, Codes**, Settings) + "Show pets"; **Pets** em grelha por cor de raridade (Common azul, Uncommon verde, Rare roxo) com o pet escolhido realçado (contorno branco, brilho dourado, faíscas; no jogo também um "pop" de 1.06 e faíscas a piscar) e painel de detalhe (raios a rodar atrás do pet, Cash/s, HP, quem o apanhou, XP, os 4 ataques pela cor do tipo, Send home / Pick up); **Index** com filtros de bioma (All/Forest/Desert/Starters), contador e silhuetas para vistos/desconhecidos; **Research em ecrã inteiro** (árvore de hexágonos, tooltip com botão, pesquisa em curso, Exit); **Items**, **Shop** (produtos e preços são exemplos, por decidir) e **Codes**. Ícones novos e originais (20, frame "Icons v2 (export these)", exportação PNG 1×/2× já configurada) para o developer importar; retratos dos 6 pets fotografados no Studio. | Pedido do developer; Trade e Settings ficam como estão. Implementar no jogo é o passo seguinte. |
+
+
+### 2026-11-05 — Aplicação real do HUD Claude Design v3 (Nova)
+- Por ordem do JB transmitida por Atlas, o HUD/menus do pacote fornecido está ativo no place 109653985388163, com dados existentes e backup NovaDesignHud_20261105; 22/22 fontes verificadas por leitura de volta. Sem alteração de mecânicas ou publicação.
+- Aprovação visual não declarada. QA horizontal feita em harness; emulação real/touch/gamepad pendentes. StarterChoice, BattleScreen e resumo não substituídos neste port. Evidência e limites: [[../design/hud-user-2026-11-03/implementation/design-runtime-2026-11-05/STATUS|Estado da aplicação do HUD]].
+
+
+### 2026-11-05 — Starter, batalha e resumo do GUI fornecido aplicados (Nova)
+- Continuação da ordem JB via Atlas: StarterPick/BattleHUD/BattleSummary ligados aos remotos e snapshots existentes, sem mudar mecânicas. Batalha/escape/vitória reais e estados de starter em fixture validados; backup NovaDesignRemaining_20261105, Studio entregue em Edit.
+- Preservada divergência anterior do BattleScreen: disco tem CapsuleSequence ainda não importado por Coder; Studio recebeu apenas os hooks GUI sobre a sua versão funcional. Fonte aplicada, hashes, capturas e lista exata em [[../design/hud-user-2026-11-03/implementation/design-runtime-2026-11-05/STATUS|STATUS do GUI]]. Não sincronizar o BattleScreen isoladamente sem coordenar as dependências de Coder.
+
+
+### 2026-11-06 — Passagem de HUD pedida pelo JB (Nova)
+- Botões encostados à parede em desktop, portátil e TV (`Layout.EDGE`, `HUD:SetOverscan`); telemóvel fica com a margem atual.
+- Todas as notificações passam a pop-up modal grande (`Screens/Popups`), em fila e retidas durante batalhas, resultados e escolha inicial. "Progress saved" deixou de avisar, por disparar depois de cada recompensa: decisão a confirmar pelo JB. `Screens/Toasts` fica sem uso, não apagado.
+- Ícones do pack aprovado: Plus = Currency/Premium (símbolo Premium amarelo), Research = Item/Green Potion (o pack não tem átomo nem microscópio), Capsule = cápsula do jogo. Pop-ups: UI/Info, UI/Warning, UI/Checkmark. Texturas FX de `scripts/make-ui-fx-textures.py`.
+- Brilho da Shop em todos os botões (`Html.plate`, `Kit.button`); só a Shop continua sempre em movimento.
+- Menu de pets usa o modelo e o clip Idle reais em ViewportFrame (`Core/PetStage`), revogando a regra anterior de só imagens planas neste ecrã. Spoutle, Glimmouse e Plazadillo mantêm retrato animado até os modelos originais estarem no place.
+- Aprovação visual pendente. Backup: `ServerStorage.NovaHudBeforePass_20261106`. Evidência: [[../design/hud-user-2026-11-03/implementation/hud-pass-2026-11-06/hashes.json]].
+
+
+### 2026-11-06 — Correção das notificações e ícones pedida pelo JB (Nova)
+- Revoga "todas as notificações em pop-up": só Trade Request e Offline earnings são pop-up (`Screens/Popups`), agora 820 de largura em vez de 1420, sem brilho. O resto é texto pequeno e temporário no topo, por baixo do Base (`Screens/Notices`).
+- Settings: botão sem brilho nem gloss; o menu abre logo por baixo da engrenagem e cresce a partir dela, em qualquer proporção de ecrã.
+- Research = Item/Purple Potion 1st (poção roxa no botão rosa). News: papel dentro da placa e ponto no canto. Friend boost e Premium passam de 112 para 84.
+- Index sem filtro Neutral; os starters continuam em All.
+- Aprovação visual pendente. Backup: `ServerStorage.NovaHudBeforePass2_20261106`.
+
+### 2026-11-07 — LihFolk Vault e repositório público (Atlas, a pedido do JB)
+- Revoga "só inspiração": a equipa pode e deve retirar do LIH.FOLK.VAULT o que for útil para o jogo, sem obrigação. Limites da licença: nada de redistribuir no repositório público, assets do pack só privados no Roblox, Dataset só para estudo.
+- O repositório é público. O trabalho partilhado vive em `v3-integration`, publicado com `scripts/publish-clean.sh`; o ramo local `feat/v3-systems` tem o vault e pesados e nunca sobe (hook `pre-push`).

@@ -13,6 +13,7 @@ local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
 local Workspace = game:GetService("Workspace")
 
+local Config = require(ReplicatedStorage.Shared.Config)
 local UITheme = require(ReplicatedStorage.Shared.UITheme)
 local PetVisibility = require(script.Parent.PetVisibility)
 local UI = script.Parent.Parent.UI
@@ -35,6 +36,12 @@ local ENTRIES = {
 }
 
 function Menu.Start()
+	if Config.UI.userHudEnabled then
+		if Config.UI.designHudEnabled then
+			return require(script.Parent.DesignHud).Start()
+		end
+		return require(script.Parent.UserHud).Start()
+	end
 	local player = Players.LocalPlayer
 
 	local gui = Instance.new("ScreenGui")

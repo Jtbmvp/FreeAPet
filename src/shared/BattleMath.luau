@@ -6,25 +6,36 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
 local Config = require(ReplicatedStorage.Shared.Config)
+local ProgressionMath = require(script.Parent.ProgressionMath)
 
 export type Stats = { hp: number, attack: number, defense: number, speed: number }
 
 local BattleMath = {}
 
+local override: boolean? = nil
+
 -- Battles are on in the published game only with Battle.enabled; in Studio
--- they are also on while Debug is, for testing (decision 3).
+-- they are also on while Debug is, for testing (decision 3). The debug
+-- "/battles" command can override this at runtime (server only).
 function BattleMath.Enabled(): boolean
+	if override ~= nil then
+		return override
+	end
 	return Config.Battle.enabled or (RunService:IsStudio() and Config.Debug.enabled)
+end
+
+function BattleMath.SetOverride(value: boolean?)
+	override = value
 end
 
 function BattleMath.Stats(speciesId: string, level: number): Stats
 	local base = Config.Battle.species[speciesId]
-	local factor = 1 + Config.Battle.statGrowthPerLevel * (level - 1)
+	local growth = Config.Progression.pet.statGrowth
 	return {
-		hp = math.floor(base.hp * factor),
-		attack = math.floor(base.attack * factor),
-		defense = math.floor(base.defense * factor),
-		speed = math.floor(base.speed * factor),
+		hp = math.floor(base.hp * (1 + growth.hp * (level - 1))),
+		attack = math.floor(base.attack * (1 + growth.attack * (level - 1))),
+		defense = math.floor(base.defense * (1 + growth.defense * (level - 1))),
+		speed = math.floor(base.speed * (1 + growth.speed * (level - 1))),
 	}
 end
 
@@ -57,17 +68,18 @@ function BattleMath.CaptureChance(rarity: string, hpFraction: number): number
 end
 
 function BattleMath.XpToNext(level: number): number
-	return Config.Battle.xp.toNextBase + Config.Battle.xp.toNextPerLevel * level
+	return ProgressionMath.PetXpToNext(level)
 end
 
 function BattleMath.XpForWin(wildLevel: number): number
-	return Config.Battle.xp.winBase + Config.Battle.xp.perWildLevel * wildLevel
+	local reward = Config.Progression.rewards.win
+	return reward.petBase + reward.petPerLevel * wildLevel
 end
 
 -- Level range of a wild pet of this species.
 function BattleMath.WildLevelRange(speciesId: string): (number, number)
 	local species = Config.Species[speciesId]
-	local byBiome = Config.Battle.wildLevels[species.biome]
+	local byBiome = species.biome and Config.Battle.wildLevels[species.biome]
 	local range = byBiome and byBiome[species.rarity] or { 1, 1 }
 	return range[1], range[2]
 end

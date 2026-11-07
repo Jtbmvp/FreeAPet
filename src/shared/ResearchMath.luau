@@ -7,7 +7,6 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Config = require(ReplicatedStorage.Shared.Config)
-local Format = require(ReplicatedStorage.Shared.Format)
 local Types = require(ReplicatedStorage.Shared.Types)
 
 type Progress = { [string]: Types.ResearchProgress }
@@ -35,7 +34,7 @@ function ResearchMath.Value(progress: Progress, effect: string, default: number,
 	for id, node in Config.Research do
 		if node.effect == effect then
 			local level = ResearchMath.LevelOf(progress, id, now)
-			if level > 0 then
+			if level > 0 and node.levels[level] then
 				return node.levels[level].value
 			end
 		end
@@ -46,7 +45,7 @@ end
 -- The node being researched, if any (not yet finished).
 function ResearchMath.Active(progress: Progress, now: number): (string?, number?)
 	for id, entry in progress do
-		if entry.activeLevel and entry.finishesAt and entry.finishesAt > now then
+		if Config.Research[id] and entry.activeLevel and entry.finishesAt and entry.finishesAt > now then
 			return id, entry.finishesAt
 		end
 	end
@@ -100,22 +99,14 @@ function ResearchMath.Describe(nodeId: string, level: number): string
 		return `+{percent((value or 1) - 1)} base income`
 	elseif effect == "offlineIncomePercent" then
 		return `{percent(value or Config.Economy.offlineIncomePercent)} income offline`
-	elseif effect == "growthMultiplier" then
-		return `+{percent((value or 1) - 1)} growth speed`
 	elseif effect == "carryCapacity" then
 		local n = value or Config.Gameplay.carry.startingCapacity
 		return if n == 1 then "Carry 1 pet" else `Carry {n} pets`
 	elseif effect == "walkSpeed" then
 		local speed = string.format("%.1f", value or Config.Gameplay.player.walkSpeed):gsub("%.0$", "")
 		return `Speed {speed}`
-	elseif effect == "maxLoose" then
-		return `{value or Config.Economy.maxLooseAnimals} pets loose at once`
 	elseif effect == "researchTimeMultiplier" then
 		return `-{percent(1 - (value or 1))} research time`
-	elseif effect == "releaseShieldSeconds" then
-		return if value then `{Format.Duration(value)} shield on release` else "No shield"
-	elseif effect:sub(1, 11) == "protection." then
-		return `Meter {percent(1 - (value or 1))} slower`
 	end
 	return ""
 end

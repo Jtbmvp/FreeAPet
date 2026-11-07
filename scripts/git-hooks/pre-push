@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+# Bloqueia push de material de terceiros ou pesado para o repositório público.
+# Instalar: cp scripts/git-hooks/pre-push .git/hooks/pre-push && chmod +x .git/hooks/pre-push
+FORBIDDEN='^(LIH\.FOLK\.VAULT|Free a Pet images/|Free a Pet Models-1/|\.agents/|\.claude/|backups/|tools/roclicks-skills/|"?(LIH\.FOLK|Free a Pet (images|Models)))'
+status=0
+while read -r _ local_sha _ _; do
+  [[ "$local_sha" =~ ^0+$ ]] && continue
+  if git ls-tree -r --name-only "$local_sha" | grep -qE "$FORBIDDEN"; then
+    echo "pre-push: $local_sha contém caminhos proibidos no repositório público." >&2
+    echo "Usa scripts/publish-clean.sh." >&2
+    status=1
+  fi
+done
+exit $status

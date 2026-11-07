@@ -1,0 +1,25 @@
+<!doctype html><html lang="pt"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>FreeAPet — reorganização</title><style>body{margin:0;background:#0e1420;color:#e5edf7;font:16px/1.6 system-ui}main{max-width:950px;margin:auto;padding:32px}h1{font-size:26px;color:#a4d7ff}pre{white-space:pre-wrap;font:inherit;background:#182231;padding:24px;border-radius:12px}small{color:#acc1d6}</style><main><h1>FreeAPet — agentes e skills</h1><small>2026-11-05 · Papéis aplicados; validações especializadas em curso</small><pre># Reorganização FreeAPet — 2026-11-05
+
+**Aplicado:** papéis dos seis bots no Codync, regras de leitura por necessidade, ownership, acesso exclusivo Studio e fecho com evidências. Backups completos criados; ficheiros anteriores preservados. Workflow persistido no repositório, sem alterar jogo ou mecânicas.
+
+| Agente | Skills atribuídas nas instruções |
+|---|---|
+| Atlas | roblox-game-pipeline |
+| Terra | studify |
+| Pixel | roblox-vfx + studify |
+| Nova | roblox-ui-maker |
+| Coder | roblox-luau + roblox-architecture + roblox-game-systems, por tarefa |
+| Sentinel | roblox-testing + referência QA pipeline |
+
+**Verificado:** configuração dos seis lida de volta; quatro skills completas nos dois motores iguais ao RoClicks por hash; 138 ficheiros upstream inventariados; preservação dos ficheiros iniciais PASS. Pixel confirmou os 20 ficheiros VFX, texturas, bundle runtime, templates compilados e Blender headless. Terra confirmou studify e os 27 ficheiros meshlab, sintaxe e teste parcial do render no Blender. Sem aprovação visual de jogo. Nova confirmou acesso aos 53 ficheiros UI e testes build/export/bundle em Linux. Sentinel confirmou hashes, backups e papéis. Coder confirmou ambos os transportes MCP, Studio em Edit e query de leitura do place 109653985388163, sem playtest.
+
+**Problemas:** Pillow/Lune/luau-analyze ausentes do ambiente padrão; preview VFX não descobre Vinegar; trailer grava com APIs macOS; upload Studio fechado na sessão Pixel. CDP Chromium não arrancou no teste Atlas. Meshlab refere ferramentas PBR, rigging e SDF não fornecidas; não prometer esses fluxos. Studio MCP confirmado pelo Coder. Erros CONNECTION_CLOSED de outras sessões são anteriores/locais e não anulam esse teste. Chromium headless e export passaram na sessão Nova, embora o teste Atlas tenha bloqueado.
+
+**Manual Codync:** selecionar skills por bot conforme MANUAL-CODYNC.md. As quatro continuam ativadas em todos porque update_bot não expõe esse campo. Wrappers personalizados já apontam ao RoClicks; API recusou atualizá-los por pertencerem a outro criador. Cópias locais completas preservadas, .agents protegida. Nenhuma instalação necessária para finalizar papéis; dependências só quando a tarefa concreta as exigir.
+
+**Ficheiros alterados:** AGENTS.md, CLAUDE.md, .gitignore, docs/DECISIONS.md; novos docs/agent-workflow/* e tools/agent-workflow/*; memória Atlas e instruções dos seis bots. Backups locais ignorados pelo Git. Sem commit/push, sem escrita no vault de inspiração.
+
+**Onde ficámos:** auditorias dos cinco especialistas recebidas e estrutura aplicada. Studio MCP confirmado. Falta selecionar skills por bot na UI Codync. Dependências ficam para tarefas concretas, sem instalações agora. Usar roblox-testing local em .agents/skills/roblox-testing/SKILL.md; não existe no RoClicks. Não iniciar funcionalidades nem novas auditorias.
+
+Nota Nova: não repetir aprovação de um design já aprovado nem transformar regras genéricas desta reorganização em redesign do HUD. Referência e viewport específicos da tarefa prevalecem sobre defaults. O rebuild anterior do HUD continua em pausa e sem aprovação visual; Nova reportou dois uploads anteriores a esta auditoria, sem alterações src. Nesta auditoria só escreveu evidence/nova.md.
+</pre></main></html>

@@ -9,7 +9,7 @@ local Services = script.Parent.Services
 local startOrder = {
 	require(Services.NotifyService),
 	require(Services.MapPolishService),
-	require(Services.PlayerDataService),
+	require(Services.BattlePresentationService),
 	require(Services.PlayerStateService),
 	require(Services.BaseService),
 	require(Services.ZoneService),
@@ -19,13 +19,17 @@ local startOrder = {
 	require(Services.HomeService),
 	require(Services.TeamService),
 	require(Services.TabletService),
+	require(Services.StarterService),
+	require(Services.HudCommerceService),
 	require(Services.BattleService),
+	require(Services.WorldInteractionService),
 	require(Services.TradeService),
 	require(Services.LeaderboardService),
-	require(Services.GrowthService),
-	require(Services.ExposureService),
 	require(Services.ResearchService),
 	require(Services.DayCycleService),
+	require(Services.ProgressionService),
+	require(Services.DebugService), -- Studio + Debug.enabled only
+	require(Services.PlayerDataService), -- registers loads after all restore/save hooks
 }
 
 for _, service in startOrder do

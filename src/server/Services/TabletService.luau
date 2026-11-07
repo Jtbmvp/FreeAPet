@@ -12,8 +12,6 @@ local Config = require(ReplicatedStorage.Shared.Config)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Types = require(ReplicatedStorage.Shared.Types)
 local AnimalService = require(script.Parent.AnimalService)
-local HomeService = require(script.Parent.HomeService)
-local NotifyService = require(script.Parent.NotifyService)
 local PlayerDataService = require(script.Parent.PlayerDataService)
 local TeamService = require(script.Parent.TeamService)
 
@@ -21,8 +19,10 @@ export type PetView = {
 	id: string,
 	speciesId: string,
 	size: number,
-	growth: number,
-	state: string, -- "InBase" | "Following" | "Loose" | "Carried"
+	stage: string,
+	legacyAppearance: boolean,
+	attack: number,
+	state: string, -- "InBase" | "Following" | "Inventory" | "Battling"
 	cashPerSecond: number, -- what it earns in the base (0 while away or equipped)
 	origin: Types.PetOrigin?,
 	level: number,
@@ -57,7 +57,7 @@ end
 
 local function view(player: Player): TabletView?
 	local data = PlayerDataService.Get(player)
-	if not data then
+	if not data or not PlayerDataService.IsReady(player) then
 		return nil
 	end
 	local multiplier = player:GetAttribute("IncomeMultiplier")
@@ -65,10 +65,13 @@ local function view(player: Player): TabletView?
 	local pets = {}
 	for id, saved in data.animals do
 		local record = AnimalService.Get(id)
-		local growth = if record then record.growth else saved.growth
-		local state = if record then record.state else "InBase"
+		if saved.unavailableReason then
+			continue
+		end
+		local state = if record and record.ownerUserId == player.UserId then record.state else "Inventory"
 		local level = if record then record.level else saved.level or 1
-		local maxHp = BattleMath.Stats(saved.speciesId, level).hp
+		local stats = BattleMath.Stats(saved.speciesId, level)
+		local maxHp = stats.hp
 		local hp = if record then record.hp else saved.hp
 		local moves = {}
 		for _, move in Config.Battle.species[saved.speciesId].moves do
@@ -78,15 +81,18 @@ local function view(player: Player): TabletView?
 			id = id,
 			speciesId = saved.speciesId,
 			size = saved.size,
-			growth = growth,
+			stage = AnimalMath.StageFor(level).id,
+			legacyAppearance = (saved.legacyScaleFloor or 0) > AnimalMath.ScaleFor(level),
+			attack = stats.attack,
 			state = state,
 			cashPerSecond = if state == "InBase"
-				then AnimalMath.ValuePerSecond(saved.speciesId, saved.size, growth) * multiplier
+				then AnimalMath.ValuePerSecond(saved.speciesId, saved.size, level, saved.legacyIncomeFloor)
+					* multiplier
 				else 0,
 			origin = saved.origin,
 			level = level,
 			xp = if record then record.xp else saved.xp or 0,
-			xpToNext = BattleMath.XpToNext(level),
+			xpToNext = if level >= Config.Progression.pet.maxLevel then 0 else BattleMath.XpToNext(level),
 			hp = math.min(hp or maxHp, maxHp),
 			maxHp = maxHp,
 			moves = moves,
@@ -110,6 +116,7 @@ function TabletService.Start()
 				or #animalId > 64
 				or typeof(equip) ~= "boolean"
 				or tooSoon(player, "equip")
+				or not PlayerDataService.IsReady(player)
 			then
 				return
 			end
@@ -123,27 +130,6 @@ function TabletService.Start()
 				TeamService.Unequip(player, record)
 			end
 		end)
-
-	-- Base pets are managed from the Pets window only (no prompts on them).
-	-- Picking one up needs you in your own base, like walking to it did.
-	Remotes.Get("PickUpPet").OnServerEvent:Connect(function(player: Player, animalId: unknown)
-		if typeof(animalId) ~= "string" or #animalId > 64 or tooSoon(player, "equip") then
-			return
-		end
-		local record = AnimalService.Get(animalId)
-		if not record or record.ownerUserId ~= player.UserId then
-			return
-		end
-		if player:GetAttribute("InOwnBase") ~= true then
-			NotifyService.Send(player, {
-				text = "Go to your base to pick this pet up.",
-				kind = "info",
-				icon = "release",
-			})
-			return
-		end
-		HomeService.PickUp(player, record) -- checks state and the loose limit, tells the player
-	end)
 
 	Players.PlayerRemoving:Connect(function(player)
 		lastRequestAt.view[player] = nil

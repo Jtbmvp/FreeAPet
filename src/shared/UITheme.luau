@@ -276,7 +276,8 @@ end
 function UITheme.FitText(label: TextLabel, max: number)
 	label.TextScaled = true
 	local constraint = Instance.new("UITextSizeConstraint")
-	constraint.MaxTextSize = max
+	constraint.MinTextSize = 12
+	constraint.MaxTextSize = math.max(12, max)
 	constraint.Parent = label
 end
 

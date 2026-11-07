@@ -15,6 +15,7 @@ local UserInputService = game:GetService("UserInputService")
 local Workspace = game:GetService("Workspace")
 
 local Format = require(ReplicatedStorage.Shared.Format)
+local Config = require(ReplicatedStorage.Shared.Config)
 local UITheme = require(ReplicatedStorage.Shared.UITheme)
 
 local Leaderboard = {}
@@ -34,6 +35,9 @@ local function incomeOf(player: Player): number
 end
 
 function Leaderboard.Start()
+	if Config.UI.userHudEnabled then
+		return
+	end
 	pcall(function()
 		StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.PlayerList, false)
 	end)

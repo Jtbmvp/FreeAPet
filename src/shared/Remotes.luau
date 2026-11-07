@@ -10,35 +10,38 @@ local Remotes = {}
 export type Notification = {
 	text: string,
 	kind: "info" | "warning" | "success",
-	-- A button on the notification: "bringhome" (default) pulls the pet home,
-	-- "defend" joins the battle against your pet, "trade" accepts a trade
-	-- (animalId then holds the requester's UserId).
+	-- A trade notification action; animalId holds the requester's UserId.
 	action: { label: string, animalId: string, kind: string? }?,
 	icon: string?, -- key in Config.UI.icons; default depends on kind
 }
 
 local NAMES = {
+	"ChooseStarter", -- (expectedIndex: 1|2|3, speciesId: string)
+	"StarterResult", -- Pending | Committed; grant and marker in one profile
+	"HudCommerceAction", -- Nova v1 Intent
+	"HudCommerceResult", -- Nova v1 Result; Committed only after OnAfterSave
+	-- client -> server: (requestId: integer, kind: "pet" | "heal" | "cancel", animalId: string?)
+	-- No prompt/key transport. Pet intent is resolved from current server state.
+	"WorldAction",
+	-- server -> client: authoritative progression delta (session/sequence/source)
+	"ProgressionChanged",
+	-- client -> server: (missionId, ownedPetId). Amounts and completion are server-only.
+	"ClaimMission",
+	-- server -> client: (requestId: integer, accepted: boolean, message: string)
+	"WorldActionResult",
 	-- server -> client: (Notification)
 	"Notify",
-	-- client -> server: (animalId: string) owner asks to bring a loose animal home
-	"TeleportHome",
 	-- client -> server: () the client is listening; queued notifications can be sent
 	"ClientReady",
 	-- client -> server: (nodeId: string) start the next level of a research node
 	"StartResearch",
-	-- client -> server: () drop the last own pet carried, here (outside the Safe Zone)
-	"ReleaseCarried",
 	-- client -> server: (animalId: string, equip: boolean) add to / remove from the battle team
 	"SetEquipped",
-	-- client -> server: (animalId: string) pick a base pet up to release it (Pets window)
-	"PickUpPet",
 	-- server -> client: (BattleView) a battle started, changed or ended (see BattleService)
 	"Battle",
 	-- client -> server: (action: { kind: "move", index: number } | { kind: "capsule" }
 	--   | { kind: "switch", petId: string } | { kind: "run" })
 	"BattleAction",
-	-- client -> server: (animalId: string) the owner joins the defence of their pet
-	"DefendBattle",
 	-- client -> server: (targetUserId: number) ask a player to trade
 	"TradeRequest",
 	-- client -> server: (requesterUserId: string) accept a trade request
@@ -51,8 +54,12 @@ local NAMES = {
 
 -- RemoteFunctions (client asks, server answers).
 local FUNCTIONS = {
+	"GetStarters",
+	"GetHudCommerce", -- (pendingRequestId: string?) -> Nova v1 Snapshot?
 	-- () -> TabletView (see TabletService): the player's pets and Index
 	"GetTablet",
+	-- () -> player progression, unlocks and mission state (nil until Ready)
+	"GetProgression",
 }
 
 local folder: Folder

@@ -990,7 +990,7 @@ export type Profile<T> = {
 	EndSession: (self: any) -> (),
 	AddUserId: (self: any, user_id: number) -> (),
 	RemoveUserId: (self: any, user_id: number) -> (),
-	MessageHandler: (self: any, fn: (message: JSONAcceptable, processed: () -> ()) -> ()) -> (),
+	MessageHandler: (self: any, fn: (message: JSONAcceptable, processed: () -> ()) -> (), process_existing_synchronously: boolean?) -> (),
 	Save: (self: any) -> (),
 	SetAsync: (self: any) -> (),
 }
@@ -1135,7 +1135,7 @@ function Profile:SetAsync() -- Saves the profile to the DataStore and removes th
 
 end
 
-function Profile:MessageHandler(fn)
+function Profile:MessageHandler(fn, process_existing_synchronously)
 
 	if type(fn) ~= "function" then
 		error(`[{script.Name}]: fn argument is not a function`)
@@ -1161,7 +1161,11 @@ function Profile:MessageHandler(fn)
 			
 			local send_update_data = DeepCopyTable(update_data)
 
-			task.spawn(fn, send_update_data, processed_callback)
+			if process_existing_synchronously == true then
+				fn(send_update_data, processed_callback)
+			else
+				task.spawn(fn, send_update_data, processed_callback)
+			end
 
 		end
 

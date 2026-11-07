@@ -1,0 +1,57 @@
+{
+  "python": "/usr/bin/python3",
+  "skills": {
+    "roblox-game-pipeline": {
+      "readable": true,
+      "lessons": false,
+      "files": 11
+    },
+    "studify": {
+      "readable": true,
+      "lessons": false,
+      "files": 4
+    },
+    "roblox-ui-maker": {
+      "readable": true,
+      "lessons": true,
+      "files": 53
+    },
+    "roblox-vfx": {
+      "readable": true,
+      "lessons": true,
+      "files": 20
+    },
+    "roblox-game-score": {
+      "readable": true,
+      "lessons": false,
+      "files": 2
+    },
+    "roblox-trailer": {
+      "readable": true,
+      "lessons": false,
+      "files": 18
+    }
+  },
+  "executables": {
+    "node": "/usr/bin/node",
+    "blender": "/usr/bin/blender",
+    "lune": null,
+    "luau": null,
+    "luau-analyze": null,
+    "ffmpeg": "/usr/bin/ffmpeg",
+    "ffprobe": "/usr/bin/ffprobe",
+    "gh": "/usr/bin/gh",
+    "rojo": "/home/jbernardo/.rokit/bin/rojo"
+  },
+  "modules": {
+    "PIL": false,
+    "numpy": true,
+    "scipy": false,
+    "requests": true
+  },
+  "chrome_candidates": [
+    "/home/jbernardo/.cache/ms-playwright/chromium-1248/chrome-linux64/chrome"
+  ],
+  "git_branch": "feat/v3-systems",
+  "upstream_changed_or_missing": []
+}

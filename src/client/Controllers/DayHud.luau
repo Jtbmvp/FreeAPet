@@ -1,6 +1,5 @@
 --!strict
--- Day timer: time left in the day (when loose pets go back to their
--- bases), in the bottom-right corner as a clock icon, a small title and the
+-- Day timer: time until the next rare spawn, in the bottom-right corner as a clock icon, a small title and the
 -- time. The last 30 seconds pulse in red. On touch-only screens it sits
 -- top-right instead, because the jump button owns the bottom-right.
 
@@ -10,11 +9,15 @@ local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local Workspace = game:GetService("Workspace")
 
+local Config = require(ReplicatedStorage.Shared.Config)
 local UITheme = require(ReplicatedStorage.Shared.UITheme)
 
 local DayHud = {}
 
 function DayHud.Start()
+	if Config.UI.userHudEnabled then
+		return
+	end
 	local gui = Instance.new("ScreenGui")
 	gui.Name = "DayHud"
 	gui.ResetOnSpawn = false
@@ -42,7 +45,7 @@ function DayHud.Start()
 	local icon = UITheme.Icon("timer", 64)
 	if icon then
 		icon.AnchorPoint = Vector2.new(0, 0.5)
-		icon.Position = UDim2.new(0, 0, 0.5, 0)
+		icon.Position = UDim2.fromScale(0, 0.5)
 		icon.Parent = holder
 	end
 	local title = UITheme.Label("DAY ENDS IN", 20, UITheme.colors.gold)
@@ -70,7 +73,7 @@ function DayHud.Start()
 		end
 		local left = math.max(0, math.floor(endsAt - Workspace:GetServerTimeNow()))
 		time.Text = string.format("%02d:%02d", left // 60, left % 60)
-		-- The last half minute pulses: loose pets are about to go home.
+		-- The last half minute pulses: a new rare spawn is approaching.
 		local hurry = left <= 30
 		pulse.Scale = if hurry then 1 + 0.08 * math.abs(math.sin(os.clock() * 5)) else 1
 		time.TextColor3 = if hurry then Color3.fromRGB(255, 110, 100) else Color3.new(1, 1, 1)

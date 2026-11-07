@@ -13,6 +13,7 @@ local Config = require(ReplicatedStorage.Shared.Config)
 local Format = require(ReplicatedStorage.Shared.Format)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local ResearchMath = require(ReplicatedStorage.Shared.ResearchMath)
+local ProgressionMath = require(ReplicatedStorage.Shared.ProgressionMath)
 local UITheme = require(ReplicatedStorage.Shared.UITheme)
 
 local ResearchTab = {}
@@ -169,6 +170,12 @@ function ResearchTab.TimerText(): string
 end
 
 function ResearchTab.Mount(container: Frame)
+	local alive = true
+	local connections: { RBXScriptConnection } = {}
+	local function listen(signal: RBXScriptSignal, callback: any)
+		local connection = signal:Connect(callback)
+		table.insert(connections, connection)
+	end
 	local player = Players.LocalPlayer
 	local panel = container
 	local visible = false
@@ -209,7 +216,7 @@ function ResearchTab.Mount(container: Frame)
 			canvasScale.Scale = math.min(area.X / canvasSize.X, area.Y / canvasSize.Y, 1.25)
 		end
 	end
-	treeArea:GetPropertyChangedSignal("AbsoluteSize"):Connect(fitCanvas)
+	listen(treeArea:GetPropertyChangedSignal("AbsoluteSize"), fitCanvas)
 
 	-- Details bar: the selected node.
 	local details = Instance.new("Frame")
@@ -295,7 +302,12 @@ function ResearchTab.Mount(container: Frame)
 	end
 
 	action.Activated:Connect(function()
-		if selected then
+		if selected and player:GetAttribute("DataLoaded") == true then
+			local rank = ResearchMath.LevelOf(progress(), selected, Workspace:GetServerTimeNow()) + 1
+			local level = player:GetAttribute("PlayerLevel")
+			if typeof(level) ~= "number" or level < ProgressionMath.ResearchLevel(selected, rank) then
+				return
+			end
 			Remotes.Get("StartResearch"):FireServer(selected)
 		end
 	end)
@@ -313,7 +325,10 @@ function ResearchTab.Mount(container: Frame)
 		for _, tile in tiles do
 			local node = Config.Research[tile.nodeId]
 			local level = ResearchMath.LevelOf(state, tile.nodeId, now)
-			local unlocked = ResearchMath.IsUnlocked(state, tile.nodeId, now)
+			local playerLevel = player:GetAttribute("PlayerLevel")
+			local unlocked = typeof(playerLevel) == "number"
+				and playerLevel >= ProgressionMath.ResearchLevel(tile.nodeId, level + 1)
+				and ResearchMath.IsUnlocked(state, tile.nodeId, now)
 			local nextLevel = node.levels[level + 1]
 			local color = if unlocked
 				then UITheme.colors.research[node.category]
@@ -354,6 +369,8 @@ function ResearchTab.Mount(container: Frame)
 		local node = Config.Research[selected]
 		local level = ResearchMath.LevelOf(state, selected, now)
 		local unlocked = ResearchMath.IsUnlocked(state, selected, now)
+		local playerLevel = player:GetAttribute("PlayerLevel")
+		local required = ProgressionMath.ResearchLevel(selected, level + 1)
 		local nextLevel = node.levels[level + 1]
 		detailTitle.Text = `{node.displayName}  ·  Lv {level}/{#node.levels}`
 		detailEffect.Text = if nextLevel
@@ -374,6 +391,15 @@ function ResearchTab.Mount(container: Frame)
 			actionText.Text = "MAX"
 			UITheme.Recolor(action, UITheme.colors.disabled)
 			detailNote.Text = "Fully researched!"
+		elseif typeof(playerLevel) ~= "number" or player:GetAttribute("DataLoaded") ~= true then
+			actionText.Text = "Loading..."
+			UITheme.Recolor(action, UITheme.colors.disabled)
+			detailNote.Text = "Waiting for your save."
+		elseif playerLevel < required then
+			actionText.Text = `Player Lv {required}`
+			UITheme.Recolor(action, UITheme.colors.disabled)
+			detailNote.Text =
+				`Reach player level {required} for this rank. Existing research keeps its effects.`
 		elseif not unlocked then
 			actionText.Text = "Locked"
 			UITheme.Recolor(action, UITheme.colors.disabled)
@@ -394,19 +420,29 @@ function ResearchTab.Mount(container: Frame)
 	end
 
 	for id in Config.Research do
-		player:GetAttributeChangedSignal(`Research_{id}`):Connect(refresh)
+		listen(player:GetAttributeChangedSignal(`Research_{id}`), refresh)
 	end
-	for _, name in { "ResearchActive", "ResearchFinishesAt", "Cash" } do
-		player:GetAttributeChangedSignal(name):Connect(refresh)
+	for _, name in { "ResearchActive", "ResearchFinishesAt", "Cash", "PlayerLevel", "DataLoaded" } do
+		listen(player:GetAttributeChangedSignal(name), refresh)
 	end
 	task.spawn(function()
-		while true do
+		while alive do
 			task.wait(0.5)
+			if not alive then
+				break
+			end
 			refresh() -- countdowns
 		end
 	end)
 
 	return {
+		Destroy = function()
+			alive = false
+			visible = false
+			for _, connection in connections do
+				connection:Disconnect()
+			end
+		end,
 		Show = function()
 			visible = true
 			fitCanvas()

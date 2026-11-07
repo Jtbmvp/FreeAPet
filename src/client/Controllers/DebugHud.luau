@@ -11,17 +11,19 @@ function DebugHud.Start()
 	local gui = Instance.new("ScreenGui")
 	gui.Name = "DebugHud"
 	gui.ResetOnSpawn = false
-	gui.DisplayOrder = 100
+	gui.DisplayOrder = 1 -- always under the HUD, so it can never cover a button
 
 	local label = Instance.new("TextLabel")
 	label.Name = "Info"
-	label.Position = UDim2.fromOffset(12, 60) -- top-left under Roblox's buttons: the corners hold the HUD
-	label.Size = UDim2.fromOffset(220, 86)
+	label.AnchorPoint = Vector2.new(0.5, 1)
+	label.Position = UDim2.new(0.42, 0, 1, -4) -- bottom centre: between the thumbstick and the action button
+	label.Size = UDim2.fromOffset(170, 62)
+	label.Active = false
 	label.BackgroundColor3 = Color3.new(0, 0, 0)
 	label.BackgroundTransparency = 0.4
 	label.TextColor3 = Color3.new(1, 1, 1)
 	label.Font = Enum.Font.Code
-	label.TextSize = 14
+	label.TextSize = 10
 	label.TextXAlignment = Enum.TextXAlignment.Left
 	label.Parent = gui
 	gui.Parent = player:WaitForChild("PlayerGui")
@@ -39,9 +41,11 @@ function DebugHud.Start()
 	player.AttributeChanged:Connect(refresh)
 	refresh()
 	-- Out of the way of the battle buttons.
-	player:GetAttributeChangedSignal("InBattle"):Connect(function()
-		label.Visible = player:GetAttribute("InBattle") ~= true
-	end)
+	local function visibility()
+		label.Visible = player:GetAttribute("InBattle") ~= true and player:GetAttribute("MenuOpen") ~= true
+	end
+	player:GetAttributeChangedSignal("InBattle"):Connect(visibility)
+	player:GetAttributeChangedSignal("MenuOpen"):Connect(visibility)
 end
 
 return DebugHud

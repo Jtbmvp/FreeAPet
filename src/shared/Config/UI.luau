@@ -7,6 +7,10 @@
 -- "rbxassetid://..." here. An empty id falls back to no icon.
 
 local UI = {
+	-- Staged local port. Atlas/Coder enable this only in the allocated Studio delivery.
+	userHudEnabled = true,
+	-- Claude Design package (Client.DesignUI); false falls back to the previous UserHud port.
+	designHudEnabled = true,
 	icons = {
 		cash = "rbxassetid://137704355384922", -- cash bundle
 		day = "rbxassetid://101322053419347", -- hourglass
@@ -46,4 +50,16 @@ local UI = {
 	} :: { [string]: string },
 }
 
+-- These mappings are verified Image content IDs from the supplied HUD upload.
+local HudImages = require(script.Parent.HudImages)
+for key, image in HudImages do
+	UI.icons[key] = image
+end
+UI.icons.paw = HudImages.pets
+UI.icons.upgrade = HudImages.research
+UI.icons.locked = HudImages.lock
+UI.icons.leaderboard = HudImages.trophy
+UI.icons.carry = HudImages.carry_capacity
+UI.icons.offline = HudImages.offline_income
+UI.icons.close = HudImages.UI_X1st
 return UI

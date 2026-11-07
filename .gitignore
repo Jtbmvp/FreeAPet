@@ -11,3 +11,12 @@ design/map-v2/*.glb
 design/map-v2/*.fbx
 design/pets/glb/
 __pycache__/
+
+# Personal Obsidian settings
+.obsidian/
+
+# Local safety snapshots (may contain private configuration)
+/backups/
+
+# Local upstream checkout; pinned revision and hashes live in docs/agent-workflow
+/tools/roclicks-skills/

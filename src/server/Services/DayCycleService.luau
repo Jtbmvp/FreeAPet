@@ -1,9 +1,5 @@
 --!strict
--- Day cycle. At each reset every owned animal that is out of its base
--- (loose, or being carried by a thief) goes back to its owner's base.
--- Owners who left the server lose them for now; from M4 they go to the
--- saved base instead. The same happens when the server shuts down.
--- Publishes Workspace attributes DayNumber and DayEndsAt (server time).
+-- Day number and rare spawns. Owned pets are never released by a reset.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -11,7 +7,6 @@ local Workspace = game:GetService("Workspace")
 
 local Config = require(ReplicatedStorage.Shared.Config)
 local AnimalService = require(script.Parent.AnimalService)
-local HomeService = require(script.Parent.HomeService)
 local NotifyService = require(script.Parent.NotifyService)
 
 local DayCycleService = {}
@@ -41,20 +36,6 @@ local function announceRare()
 	end
 end
 
-local function returnAllHome()
-	for _, record in AnimalService.All() do
-		if record.ownerUserId and record.state ~= "InBase" and record.state ~= "Following" then
-			if not HomeService.ReturnToBase(record) then
-				local ownerOnline = Players:GetPlayerByUserId(record.ownerUserId) ~= nil
-				if not ownerOnline then
-					AnimalService.Remove(record) -- M4: write to the owner's saved base instead
-				end
-				-- Owner online but base full: it stays loose until the next reset.
-			end
-		end
-	end
-end
-
 local function startDay()
 	dayNumber += 1
 	dayEndsAt = Workspace:GetServerTimeNow() + Config.Gameplay.day.lengthSeconds
@@ -73,9 +54,8 @@ local function startDay()
 end
 
 function DayCycleService.ForceReset()
-	returnAllHome()
 	NotifyService.Broadcast({
-		text = "A new day begins! Loose animals went back home.",
+		text = "A new day begins!",
 		kind = "info",
 		icon = "day",
 	})
@@ -92,7 +72,6 @@ function DayCycleService.Start()
 			end
 		end
 	end)
-	game:BindToClose(returnAllHome)
 end
 
 return DayCycleService

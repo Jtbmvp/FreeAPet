@@ -16,7 +16,7 @@ local TabletData = require(script.Parent.TabletData)
 
 local TradeTab = {}
 
-type Api = { Open: (tabId: string) -> () }
+type Api = { Open: (tabId: string) -> (), Close: (() -> ())? }
 
 local function petCard(pet: any, parent: Instance, onTap: (() -> ())?): TextButton
 	local species = Config.Species[pet.speciesId]
@@ -31,7 +31,7 @@ local function petCard(pet: any, parent: Instance, onTap: (() -> ())?): TextButt
 	stroke.Color = Config.Rarities[species.rarity].color
 	stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
 	stroke.Parent = card
-	local portrait = PetPortrait.New(pet.speciesId)
+	local portrait = PetPortrait.New(pet.speciesId, nil, pet.stage)
 	portrait.Position = UDim2.fromOffset(7, 4)
 	portrait.Size = UDim2.fromOffset(90, 78)
 	portrait.Parent = card
@@ -91,9 +91,16 @@ local function emptyText(frame: Instance, text: string)
 end
 
 function TradeTab.Mount(container: Frame, api: Api)
+	local alive = true
+	local connections: { RBXScriptConnection } = {}
+	local function listen(signal: RBXScriptSignal, callback: any)
+		local connection = signal:Connect(callback)
+		table.insert(connections, connection)
+	end
 	local player = Players.LocalPlayer
 	local state: any = nil -- last TradeUpdate
 	local visible = false
+	local closeRequested = false
 
 	-- No trade: the players list.
 	local lobby = Instance.new("Frame")
@@ -160,6 +167,14 @@ function TradeTab.Mount(container: Frame, api: Api)
 	local cancelButton, _ = UITheme.Button("warning", UDim2.fromOffset(150, 54), "Cancel")
 	cancelButton.Parent = buttons
 
+	local function reflowButtons()
+		local width = math.max(48, math.floor((container.AbsoluteSize.X - 24) / 3))
+		for _, button in { readyButton, confirmButton, cancelButton } do
+			button.Size = UDim2.fromOffset(width, 54)
+		end
+	end
+	listen(container:GetPropertyChangedSignal("AbsoluteSize"), reflowButtons)
+	reflowButtons()
 	local baseTitle = UITheme.Label("Your base pets (tap to add)", 16, Color3.fromRGB(190, 205, 235))
 	baseTitle.TextXAlignment = Enum.TextXAlignment.Left
 	baseTitle.Position = UDim2.fromOffset(0, 274)
@@ -181,6 +196,13 @@ function TradeTab.Mount(container: Frame, api: Api)
 	end)
 
 	local function refreshLobby()
+		local level = player:GetAttribute("PlayerLevel")
+		local unlocked = typeof(level) == "number"
+			and level >= Config.Progression.unlocks.Trade
+			and player:GetAttribute("DataLoaded") == true
+		lobbyTitle.Text = if unlocked
+			then "Trade pets with a player in this server."
+			else `Trade unlocks at player level {Config.Progression.unlocks.Trade}.`
 		for _, child in list:GetChildren() do
 			if child:IsA("Frame") or child:IsA("TextLabel") then
 				child:Destroy()
@@ -199,12 +221,18 @@ function TradeTab.Mount(container: Frame, api: Api)
 				name.ZIndex = 4
 				UITheme.FitText(name, 22)
 				name.Parent = entry
-				local button, _ = UITheme.Button("action", UDim2.fromOffset(150, 46), "Trade")
+				local button, _ = UITheme.Button(
+					"action",
+					UDim2.fromOffset(150, 46),
+					if unlocked then "Trade" else `Player Lv {Config.Progression.unlocks.Trade}`
+				)
 				button.AnchorPoint = Vector2.new(1, 0.5)
 				button.Position = UDim2.new(1, -8, 0.5, 0)
 				button.Parent = entry
 				button.Activated:Connect(function()
-					Remotes.Get("TradeRequest"):FireServer(other.UserId)
+					if player:GetAttribute("TradeUnlocked") == true then
+						Remotes.Get("TradeRequest"):FireServer(other.UserId)
+					end
 				end)
 				entry.Parent = list
 			end
@@ -299,9 +327,15 @@ function TradeTab.Mount(container: Frame, api: Api)
 		end
 	end
 
-	Remotes.Get("TradeUpdate").OnClientEvent:Connect(function(newState)
+	listen(Remotes.Get("TradeUpdate").OnClientEvent, function(newState)
 		local started = newState.active and not (state and state.active)
 		state = newState
+		if closeRequested and not newState.active then
+			closeRequested = false
+			if api.Close then
+				api.Close()
+			end
+		end
 		if started then
 			TabletData.Invalidate()
 			api.Open("Trade")
@@ -319,25 +353,42 @@ function TradeTab.Mount(container: Frame, api: Api)
 			-- Tick the countdown on screen.
 			task.spawn(function()
 				local endsAt = os.clock() + newState.countdown
-				while state == newState and os.clock() < endsAt do
+				while alive and state == newState and os.clock() < endsAt do
 					status.Text = `Trading in {math.ceil(endsAt - os.clock())}...`
 					task.wait(0.2)
 				end
 			end)
 		end
 	end)
-	Players.PlayerAdded:Connect(function()
+	listen(Players.PlayerAdded, function()
 		if visible and not (state and state.active) then
 			refreshLobby()
 		end
 	end)
-	Players.PlayerRemoving:Connect(function()
+	listen(Players.PlayerRemoving, function()
 		if visible and not (state and state.active) then
 			task.defer(refreshLobby)
 		end
 	end)
 
 	return {
+		Destroy = function()
+			alive = false
+			visible = false
+			for _, connection in connections do
+				connection:Disconnect()
+			end
+		end,
+		RequestClose = function(): boolean
+			if state and state.active then
+				if not closeRequested then
+					closeRequested = true
+					action({ kind = "cancel" })
+				end
+				return false
+			end
+			return true
+		end,
 		Show = function()
 			visible = true
 			show()

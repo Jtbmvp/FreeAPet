@@ -1,13 +1,12 @@
 --!strict
 -- Tablet > Inventory: a grid of the player's pets and, for the selected one,
--- its sheet (DESIGN-v2 §9): species, rarity, type, home biome, level, growth
+-- its sheet (DESIGN-v2 §9): species, rarity, type, home biome, level, stage
 -- and age, size, Cash/s, original owner, capture date and place, moves,
 -- plus the button to add it to / send it home from the battle team.
 -- Wide screens show the sheet beside the grid; narrow ones over it.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
-local AnimalMath = require(ReplicatedStorage.Shared.AnimalMath)
 local Config = require(ReplicatedStorage.Shared.Config)
 local Format = require(ReplicatedStorage.Shared.Format)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
@@ -26,7 +25,8 @@ local STATES: { [string]: { text: string, color: Color3, order: number } } = {
 	Following = { text = "Team", color = UITheme.colors.gold, order = 1 },
 	InBase = { text = "In base", color = UITheme.colors.cash, order = 2 },
 	Carried = { text = "Carried", color = Color3.fromRGB(120, 190, 255), order = 3 },
-	Loose = { text = "Loose", color = Color3.fromRGB(255, 160, 70), order = 4 },
+	Inventory = { text = "Stored", color = Color3.fromRGB(120, 190, 255), order = 4 },
+	Battling = { text = "In battle", color = UITheme.colors.warning, order = 5 },
 }
 
 type Card = { frame: TextButton, state: TextLabel, stroke: UIStroke }
@@ -130,7 +130,7 @@ function InventoryTab.Mount(container: Frame)
 	rows.BackgroundTransparency = 1
 	rows.BorderSizePixel = 0
 	rows.Position = UDim2.fromOffset(14, 172)
-	rows.Size = UDim2.new(1, -28, 1, -172 - 140)
+	rows.Size = UDim2.new(1, -28, 1, -172 - 76)
 	rows.CanvasSize = UDim2.new()
 	rows.AutomaticCanvasSize = Enum.AutomaticSize.Y
 	rows.ScrollBarThickness = 6
@@ -148,7 +148,8 @@ function InventoryTab.Mount(container: Frame)
 			"Home biome",
 			"Level",
 			"Health",
-			"Growth",
+			"Strength",
+			"Stage",
 			"Age",
 			"Size",
 			"Cash/s",
@@ -166,12 +167,6 @@ function InventoryTab.Mount(container: Frame)
 	action.AnchorPoint = Vector2.new(0.5, 1)
 	action.Position = UDim2.new(0.5, 0, 1, -12)
 	action.Parent = sheet
-	-- Base pets only: carry it out of the base to release it by hand.
-	local pickUp, _ = UITheme.Button("green", UDim2.new(1, -28, 0, 50), "Pick up to release")
-	pickUp.AnchorPoint = Vector2.new(0.5, 1)
-	pickUp.Position = UDim2.new(0.5, 0, 1, -76)
-	pickUp.Visible = false
-	pickUp.Parent = sheet
 
 	local function wide(): boolean
 		-- Compare in unscaled pixels: the tablet's ScreenGui has a UIScale.
@@ -206,22 +201,22 @@ function InventoryTab.Mount(container: Frame)
 		end
 		local species = Config.Species[pet.speciesId]
 		local rarity = Config.Rarities[species.rarity]
-		local biome = Config.Biomes[species.biome]
-		local stage = AnimalMath.StageFor(pet.growth)
+		local biome = species.biome and Config.Biomes[species.biome]
 		title.Text = species.displayName
 		title.TextColor3 = rarity.color
 		fields["Rarity"].Text = rarity.id
 		fields["Rarity"].TextColor3 = rarity.color
-		fields["Type"].Text = biome.displayName
-		fields["Home biome"].Text = biome.displayName
-		fields["Level"].Text = `Lv {pet.level}  ({pet.xp}/{pet.xpToNext} XP)`
+		fields["Type"].Text = if biome then biome.displayName else "Neutral"
+		fields["Home biome"].Text = if biome then biome.displayName else "—"
+		fields["Level"].Text = if pet.xpToNext == 0
+			then `Lv {pet.level} MAX`
+			else `Lv {pet.level}  ({pet.xp}/{pet.xpToNext} XP)`
 		fields["Health"].Text = if pet.hp <= 0 then `Fainted (0/{pet.maxHp})` else `{pet.hp}/{pet.maxHp} HP`
 		fields["Health"].TextColor3 = if pet.hp <= 0
 			then Color3.fromRGB(255, 110, 100)
 			else Color3.new(1, 1, 1)
-		fields["Growth"].Text = if pet.growth >= 1
-			then "Adult"
-			else `{stage.id} {math.floor(pet.growth * 100)}%`
+		fields["Strength"].Text = tostring(pet.attack)
+		fields["Stage"].Text = pet.stage .. (if pet.legacyAppearance then " (legacy size)" else "")
 		fields["Size"].Text = string.format("x%.2f", pet.size)
 		fields["Cash/s"].Text = if pet.state == "InBase"
 			then `+${Format.Short(pet.cashPerSecond)}/s`
@@ -238,8 +233,7 @@ function InventoryTab.Mount(container: Frame)
 		end
 		fields["Moves"].Text = table.concat(pet.moves, ", ")
 
-		pickUp.Visible = pet.state == "InBase"
-		if pet.state == "InBase" then
+		if pet.state == "InBase" or pet.state == "Inventory" then
 			actionText.Text = "Add to team"
 			UITheme.Recolor(action, UITheme.colors.action)
 		elseif pet.state == "Following" then
@@ -257,7 +251,7 @@ function InventoryTab.Mount(container: Frame)
 		portraitHolder:ClearAllChildren()
 		local pet = id and latest[id]
 		if pet then
-			local portrait = PetPortrait.New(pet.speciesId)
+			local portrait = PetPortrait.New(pet.speciesId, nil, pet.stage)
 			portrait.Size = UDim2.fromScale(1, 1)
 			portrait.ZIndex = 6
 			portrait.Parent = portraitHolder
@@ -270,17 +264,8 @@ function InventoryTab.Mount(container: Frame)
 	end)
 	action.Activated:Connect(function()
 		local pet = selectedId and latest[selectedId]
-		if pet and (pet.state == "InBase" or pet.state == "Following") then
-			Remotes.Get("SetEquipped"):FireServer(pet.id, pet.state == "InBase")
-			TabletData.Invalidate()
-			task.delay(0.4, refresh)
-		end
-	end)
-
-	pickUp.Activated:Connect(function()
-		local pet = selectedId and latest[selectedId]
-		if pet and pet.state == "InBase" then
-			Remotes.Get("PickUpPet"):FireServer(pet.id)
+		if pet and (pet.state == "InBase" or pet.state == "Inventory" or pet.state == "Following") then
+			Remotes.Get("SetEquipped"):FireServer(pet.id, pet.state ~= "Following")
 			TabletData.Invalidate()
 			task.delay(0.4, refresh)
 		end
@@ -299,7 +284,7 @@ function InventoryTab.Mount(container: Frame)
 		stroke.Thickness = 3
 		stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
 		stroke.Parent = frame
-		local portrait = PetPortrait.New(pet.speciesId)
+		local portrait = PetPortrait.New(pet.speciesId, nil, pet.stage)
 		portrait.Position = UDim2.fromOffset(9, 6)
 		portrait.Size = UDim2.fromOffset(100, 88)
 		portrait.Parent = frame
@@ -328,12 +313,16 @@ function InventoryTab.Mount(container: Frame)
 		end
 		now = data.now
 		local seen: { [string]: boolean } = {}
-		local inBase, team, loose = 0, 0, 0
+		local inBase, team, stored = 0, 0, 0
 		for _, pet in data.pets do
 			seen[pet.id] = true
 			latest[pet.id] = pet
 			local card = cards[pet.id] or newCard(pet)
 			cards[pet.id] = card
+			local portrait = card.frame:FindFirstChild("PetPortrait")
+			if portrait and portrait:IsA("ImageLabel") then
+				PetPortrait.Update(portrait, pet.speciesId, nil, pet.stage)
+			end
 			local state = STATES[pet.state] or STATES.InBase
 			card.state.Text = state.text
 			card.state.TextColor3 = state.color
@@ -346,7 +335,7 @@ function InventoryTab.Mount(container: Frame)
 			elseif pet.state == "Following" then
 				team += 1
 			else
-				loose += 1
+				stored += 1
 			end
 		end
 		for id, card in cards do
@@ -360,7 +349,13 @@ function InventoryTab.Mount(container: Frame)
 			selectedId = nil
 		end
 		empty.Visible = #data.pets == 0
-		summary.Text = `{inBase} in base  ·  Team {team}/{Config.Gameplay.team.maxEquipped}  ·  {loose} out`
+		summary.Text =
+			`{inBase} in base  ·  Team {team}/{Config.Gameplay.team.maxEquipped}  ·  {stored} stored`
+		local currentPet = selectedId and latest[selectedId]
+		local portrait = portraitHolder:FindFirstChild("PetPortrait")
+		if currentPet and portrait and portrait:IsA("ImageLabel") then
+			PetPortrait.Update(portrait, currentPet.speciesId, nil, currentPet.stage)
+		end
 		showSheet(selectedId and latest[selectedId] or nil)
 		layoutSheet()
 	end

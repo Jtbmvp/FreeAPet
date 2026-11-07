@@ -8,6 +8,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
 
+local Config = require(ReplicatedStorage.Shared.Config)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Sfx = require(ReplicatedStorage.Shared.Sfx)
 local UITheme = require(ReplicatedStorage.Shared.UITheme)
@@ -21,6 +22,9 @@ local ICON_SIZE = 48
 
 local list: Frame
 local order = 0
+-- The active HUD can present notifications itself; arrivals before it mounts wait in the queue.
+local presenter: ((notification: any) -> ())? = nil
+local queued: { any } = {}
 
 local function show(notification: Remotes.Notification)
 	local toast = UITheme.Panel(notification.kind)
@@ -96,12 +100,8 @@ local function show(notification: Remotes.Notification)
 		buttonLabel.Parent = button
 		button.Parent = toast
 		button.Activated:Connect(function()
-			if action.kind == "defend" then
-				Remotes.Get("DefendBattle"):FireServer(action.animalId)
-			elseif action.kind == "trade" then
+			if action.kind == "trade" then
 				Remotes.Get("TradeRespond"):FireServer(action.animalId)
-			else
-				Remotes.Get("TeleportHome"):FireServer(action.animalId)
 			end
 			toast:Destroy()
 		end)
@@ -142,6 +142,14 @@ local function show(notification: Remotes.Notification)
 	end)
 end
 
+function Notifications.SetPresenter(fn: (notification: any) -> ())
+	presenter = fn
+	for _, notification in queued do
+		fn(notification)
+	end
+	table.clear(queued)
+end
+
 function Notifications.Start()
 	local gui = Instance.new("ScreenGui")
 	gui.Name = "Notifications"
@@ -169,7 +177,15 @@ function Notifications.Start()
 
 	gui.Parent = Players.LocalPlayer:WaitForChild("PlayerGui")
 
-	Remotes.Get("Notify").OnClientEvent:Connect(show)
+	Remotes.Get("Notify").OnClientEvent:Connect(function(notification)
+		if presenter then
+			presenter(notification)
+		elseif Config.UI.userHudEnabled and Config.UI.designHudEnabled then
+			table.insert(queued, notification)
+		else
+			show(notification)
+		end
+	end)
 	Remotes.Get("ClientReady"):FireServer()
 end
 

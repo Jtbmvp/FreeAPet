@@ -25,16 +25,26 @@ local BattleSettings = require(Battle.BattleSettings)
 local Common = require(Battle.Fx.Common)
 local Fx = require(Battle.Fx)
 
+local PetAnimator = require(script.Parent.PetAnimator)
+
+local CapsuleSequence = require(Battle.CapsuleSequence)
+
 local BattleScreen = {}
 
 local TYPE_COLORS = Common.TYPE_COLORS
 -- HUD that steps aside for the battle (their own visibility logic is kept).
-local HUD_GUIS = { "CashHud", "Leaderboard", "DayHud", "ExposureHud", "DebugHud" }
+local HUD_GUIS = { "CashHud", "Leaderboard", "DayHud", "DebugHud" }
 local EVENT_SECONDS = 0.95
-local SPARKS = "rbxasset://textures/particles/sparkles_main.dds"
 local SMOKE = "rbxasset://textures/particles/smoke_main.dds"
 
-type Card = { frame: Frame, name: TextLabel, level: TextLabel, fill: Frame, hpText: TextLabel }
+type Card = {
+	frame: Frame,
+	name: TextLabel,
+	level: TextLabel,
+	fill: Frame,
+	hpText: TextLabel,
+	onHp: ((number, number, boolean?) -> ())?,
+}
 
 local function newCard(parent: Instance, anchor: Vector2, position: UDim2): Card
 	local frame = UITheme.Panel()
@@ -83,6 +93,9 @@ local function newCard(parent: Instance, anchor: Vector2, position: UDim2): Card
 end
 
 local function setHp(card: Card, hp: number, maxHp: number, instant: boolean?)
+	if card.onHp then
+		card.onHp(hp, maxHp, instant)
+	end
 	local fraction = math.clamp(hp / math.max(maxHp, 1), 0, 1)
 	local color = if fraction > 0.5
 		then UITheme.colors.cash
@@ -130,74 +143,30 @@ local function faint(model: Model?)
 	if not root then
 		return
 	end
-	TweenService:Create(root, TweenInfo.new(0.5, Enum.EasingStyle.Quad), {
-		CFrame = root.CFrame * CFrame.Angles(0, 0, math.rad(80)) - Vector3.new(0, 0.6, 0),
-	}):Play()
+	-- Faint owns its fall and final pose; only legacy rigs use the procedural tip.
+	local length = PetAnimator.PlayOnce(model :: Model, "Faint", true)
+	if not length then
+		TweenService:Create(root, TweenInfo.new(0.5, Enum.EasingStyle.Quad), {
+			CFrame = root.CFrame * CFrame.Angles(0, 0, math.rad(80)) - Vector3.new(0, 0.6, 0),
+		}):Play()
+	end
 	burst(model, SMOKE, Color3.fromRGB(200, 200, 200), 16)
-end
-
--- The capsule flies from the player to the wild pet, which vanishes into
--- it; it shakes, then either locks (caught) or bursts open (escaped).
-local function throwCapsule(from: Vector3, wild: Model?, shakes: number, caught: boolean)
-	local root = wild and wild.PrimaryPart
-	if not root or not wild then
-		return
-	end
-	local capsule = Instance.new("Part")
-	capsule.Shape = Enum.PartType.Ball
-	capsule.Size = Vector3.one * 1.4
-	capsule.Material = Enum.Material.SmoothPlastic
-	capsule.Color = Color3.fromRGB(120, 200, 255)
-	capsule.Anchored = true
-	capsule.CanCollide = false
-	capsule.CanQuery = false
-	capsule.CFrame = CFrame.new(from)
-	capsule.Parent = Workspace
-	local landing = root.Position - Vector3.new(0, wild:GetExtentsSize().Y / 2 - 0.7, 0)
-	local mid = (from + landing) / 2 + Vector3.new(0, 6, 0)
-	for t = 0, 1, 0.1 do
-		local a = from:Lerp(mid, t)
-		local b = mid:Lerp(landing, t)
-		capsule.CFrame = CFrame.new(a:Lerp(b, t))
-		task.wait(0.03)
-	end
-	burst(wild, SPARKS, Color3.new(1, 1, 1), 20)
-	for _, part in wild:GetDescendants() do
-		if part:IsA("BasePart") then
-			part.LocalTransparencyModifier = 1
-		end
-	end
-	for _ = 1, shakes do
-		task.wait(0.35)
-		Sfx.Play("capsuleShake")
-		local start = capsule.CFrame
-		capsule.CFrame = start * CFrame.Angles(0, 0, math.rad(25))
-		task.wait(0.12)
-		capsule.CFrame = start * CFrame.Angles(0, 0, math.rad(-25))
-		task.wait(0.12)
-		capsule.CFrame = start
-	end
-	task.wait(0.3)
-	if caught then
-		Sfx.Play("captured")
-		capsule.Color = UITheme.colors.gold
-		burst(wild, SPARKS, UITheme.colors.gold, 30)
-		task.delay(1.2, function()
-			capsule:Destroy()
-		end)
-	else
-		for _, part in wild:GetDescendants() do
-			if part:IsA("BasePart") then
-				part.LocalTransparencyModifier = 0
-			end
-		end
-		burst(wild, SPARKS, Color3.fromRGB(120, 200, 255), 20)
-		capsule:Destroy()
-	end
 end
 
 function BattleScreen.Start()
 	local player = Players.LocalPlayer
+	local design: any = nil
+	if Config.UI.userHudEnabled and Config.UI.designHudEnabled then
+		design = require(script.Parent.Parent.UI.DesignBattle).new()
+	end
+	local epoch, destroyed = 0, false
+	local cameraTicket: number? = nil
+	local queue: { any } = {}
+	local function invalidate()
+		epoch += 1
+		Fx.CancelAll()
+		CapsuleSequence.CancelAll()
+	end
 	local camera = Workspace.CurrentCamera
 
 	local gui = Instance.new("ScreenGui")
@@ -218,6 +187,14 @@ function BattleScreen.Start()
 
 	local wildCard = newCard(gui, Vector2.new(0, 0), UDim2.fromOffset(20, 70))
 	local mineCard = newCard(gui, Vector2.new(0, 1), UDim2.new(0, 20, 1, -150))
+	if design then
+		wildCard.onHp = function(hp, maxHp, instant)
+			design:SetHp("wild", hp, maxHp, instant)
+		end
+		mineCard.onHp = function(hp, maxHp, instant)
+			design:SetHp("mine", hp, maxHp, instant)
+		end
+	end
 	mineCard.frame.Size += UDim2.fromOffset(0, 12)
 	local xpBar = Instance.new("Frame")
 	xpBar.BackgroundColor3 = UITheme.colors.outline
@@ -261,6 +238,11 @@ function BattleScreen.Start()
 	messageText.ZIndex = 3
 	UITheme.FitText(messageText, 22)
 	messageText.Parent = message
+	if design then
+		messageText:GetPropertyChangedSignal("Text"):Connect(function()
+			design.HUD:SetPrompt(messageText.Text)
+		end)
+	end
 
 	-- Actions: 4 moves (2x2) and Capsule / Switch / Run.
 	local actions = Instance.new("Frame")
@@ -349,6 +331,9 @@ function BattleScreen.Start()
 	local inBattle = false
 
 	local function setActionsEnabled(enabled: boolean)
+		if design then
+			design:Actions(enabled)
+		end
 		actions.Visible = enabled
 		showMoves(false)
 		if not enabled then
@@ -357,6 +342,9 @@ function BattleScreen.Start()
 	end
 
 	local function refreshButtons()
+		if design and view then
+			design:Refresh(view)
+		end
 		if not view then
 			return
 		end
@@ -432,11 +420,21 @@ function BattleScreen.Start()
 		homes[panel.frame] = panel.frame.Position
 	end
 	local function slidePanels(show: boolean)
+		if design then
+			if show then
+				design:Show()
+			else
+				design:Hide()
+			end
+		end
 		for index, panel in panels do
 			local home = homes[panel.frame]
 			if show then
 				panel.frame.Position = home + panel.from
 				task.delay(0.06 * index, function()
+					if destroyed or not inBattle then
+						return
+					end
 					TweenService:Create(
 						panel.frame,
 						TweenInfo.new(0.35, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
@@ -449,13 +447,33 @@ function BattleScreen.Start()
 		end
 	end
 
-	local function leave()
+	local function leave(immediate: boolean?)
+		invalidate()
+		table.clear(queue)
 		inBattle = false
 		gui.Enabled = false
+		if design then
+			design:Hide()
+		end
 		UserInputService.ModalEnabled = false
 		showHud(true)
 		BattleObstacles.Restore()
-		task.spawn(BattleCamera.Release, 0.6)
+		local ticket = cameraTicket
+		if ticket then
+			if immediate then
+				BattleCamera.Release(0, ticket)
+				if cameraTicket == ticket then
+					cameraTicket = nil
+				end
+			else
+				task.spawn(function()
+					BattleCamera.Release(0.6, ticket)
+					if cameraTicket == ticket then
+						cameraTicket = nil
+					end
+				end)
+			end
+		end
 	end
 
 	local function send(action: { [string]: any })
@@ -466,6 +484,30 @@ function BattleScreen.Start()
 		Remotes.Get("BattleAction"):FireServer(action)
 	end
 
+	if design then
+		design.HUD.Attack:Connect(function(index)
+			local move = view and view.mine.moves[index]
+			if move and (move.usesLeft == nil or move.usesLeft > 0) then
+				send({ kind = "move", index = index })
+			end
+		end)
+		design.HUD.Throw:Connect(function()
+			if view and view.role ~= "defender" and view.kind == "wild" then
+				send({ kind = "capsule" })
+			end
+		end)
+		design.HUD.Run:Connect(function()
+			if view and view.role ~= "defender" then
+				send({ kind = "run" })
+			end
+		end)
+		design.HUD.Switch:Connect(function(index)
+			local pet = view and view.team[index]
+			if view and view.role ~= "defender" and pet and pet.id ~= view.mine.id and pet.hp > 0 then
+				send({ kind = "switch", petId = pet.id })
+			end
+		end)
+	end
 	for i, entry in moveButtons do
 		entry.button.Activated:Connect(function()
 			local move = view and view.mine.moves[i]
@@ -527,6 +569,10 @@ function BattleScreen.Start()
 
 	-- Plays the events of one update, then shows the new state.
 	local function play(newView: any)
+		local token = epoch
+		local function cancelled(): boolean
+			return destroyed or not inBattle or token ~= epoch
+		end
 		busy = true
 		local previous = view
 		local hp = {
@@ -542,16 +588,20 @@ function BattleScreen.Start()
 			wild = newView.wild.model,
 		}
 		for _, event in newView.events do
+			if cancelled() then
+				return
+			end
 			local pause = if previous then EVENT_SECONDS else 0.5
 			messageText.Text = event.text
 			if event.effect == "capture" or event.effect == "escape" then
 				local character = player.Character
 				local root = character and character:FindFirstChild("HumanoidRootPart") :: BasePart?
-				throwCapsule(
+				CapsuleSequence.Play(
 					if root then root.Position + Vector3.new(0, 2, 0) else newView.centre.Position,
 					models.wild,
 					event.damage or 1,
-					event.effect == "capture"
+					event.effect == "capture",
+					cancelled
 				)
 			elseif event.damage and event.actor and event.target then
 				-- The attack's own animation and effects (Battle/Fx); the HP
@@ -567,6 +617,8 @@ function BattleScreen.Start()
 					moveType = event.moveType or "Neutral",
 					effect = event.effect,
 					damage = event.damage,
+					cancelled = cancelled,
+					onBeat = BattleCamera.OnBeat,
 					impact = function()
 						setHp(
 							if targetSide == "mine" then mineCard else wildCard,
@@ -583,6 +635,11 @@ function BattleScreen.Start()
 				faint(models[event.target])
 			elseif event.effect == "levelup" then
 				Sfx.Play("levelUp")
+				models.mine, models.wild = newView.mine.model, newView.wild.model
+				BattleCamera.SetPets(models.mine, models.wild)
+				if models.mine then
+					PetAnimator.PlayOnce(models.mine, "Happy")
+				end
 			elseif event.effect == "switch" then
 				view = newView
 				models.mine = newView.mine.model
@@ -594,6 +651,12 @@ function BattleScreen.Start()
 			-- The intro already named both pets: its lines go by quicker;
 			-- an attack already took its time.
 			task.wait(pause)
+			if cancelled() then
+				return
+			end
+		end
+		if cancelled() then
+			return
 		end
 		view = newView
 		showCards()
@@ -617,9 +680,17 @@ function BattleScreen.Start()
 			messageText.Text = texts[newView.result] or ""
 			if newView.result == "won" or newView.result == "captured" then
 				Sfx.Play("won")
+				if models.mine then
+					PetAnimator.PlayOnce(models.mine, "Happy")
+				end
+			end
+			if design then
+				design:Result(newView, messageText.Text)
 			end
 			task.wait(1.6)
-			leave()
+			if not cancelled() then
+				leave()
+			end
 		else
 			local petName = Config.Species[newView.mine.speciesId].displayName
 			messageText.Text = if newView.role == "defender"
@@ -641,8 +712,16 @@ function BattleScreen.Start()
 	end
 
 	-- First view of a battle: take the camera, play the intro, show the UI.
-	local function begin(newView: any)
+	local function begin(newView: any): boolean
+		invalidate()
+		local token = epoch
+		local function cancelled(): boolean
+			return destroyed or not inBattle or token ~= epoch
+		end
 		inBattle = true
+		if design then
+			design:Begin(newView)
+		end
 		view = nil
 		gui.Enabled = true
 		slidePanels(false)
@@ -672,7 +751,7 @@ function BattleScreen.Start()
 			end
 		end
 		local mineName = Config.Species[newView.mine.speciesId].displayName
-		BattleCamera.Begin(newView.centre, newView.mine.model, newView.wild.model)
+		cameraTicket = BattleCamera.Begin(newView.centre, newView.mine.model, newView.wild.model)
 		-- Clear the view: other pets, players and small props in the ring or
 		-- in front of the camera hide for this player until the battle ends.
 		local keepList: { Instance? } = { newView.mine.model, newView.wild.model, newView.foeTrainer }
@@ -697,48 +776,138 @@ function BattleScreen.Start()
 				newView.wild,
 				newView.foeName or Config.Species[newView.wild.speciesId].displayName
 			),
-			short = BattleSettings.shortIntro or newView.role == "defender",
+			short = BattleSettings.shortIntro or BattleSettings.reducedMotion or newView.role == "defender",
+			cancelled = cancelled,
 		})
+		if cancelled() then
+			return false
+		end
 		slidePanels(true)
+		return true
 	end
 
-	-- Safety net: if the end never reaches this screen, still show the world again.
-	player:GetAttributeChangedSignal("InBattle"):Connect(function()
-		if player:GetAttribute("InBattle") ~= true then
-			task.delay(3, function()
-				if not inBattle then
-					BattleObstacles.Restore()
-				end
-			end)
+	-- Death/respawn/remote errors may abort while a renderer is yielding.
+	local connections: { RBXScriptConnection } = {}
+	local death: RBXScriptConnection? = nil
+	local function watchCharacter(character: Model)
+		if death then
+			death:Disconnect()
+			death = nil
 		end
-	end)
-
-	-- Updates play one after another; the first one opens the battle.
-	local queue: { any } = {}
-	local working = false
-	Remotes.Get("Battle").OnClientEvent:Connect(function(newView)
-		if not inBattle and #queue == 0 and not working then
-			if newView.result then
-				return -- an end we were not shown (e.g. after a respawn)
-			end
-		end
-		table.insert(queue, newView)
-		if working then
+		local humanoid = character:WaitForChild("Humanoid", 5)
+		if destroyed or character ~= player.Character or not humanoid or not humanoid:IsA("Humanoid") then
 			return
 		end
-		working = true
-		task.spawn(function()
-			while #queue > 0 do
-				local nextView = table.remove(queue, 1)
-				if not inBattle then
-					begin(nextView)
-				end
-				play(nextView)
-			end
-			working = false
+		death = humanoid.Died:Connect(function()
+			leave(true)
 		end)
+	end
+	table.insert(connections, player.CharacterAdded:Connect(watchCharacter))
+	table.insert(
+		connections,
+		player.CharacterRemoving:Connect(function()
+			leave(true)
+		end)
+	)
+	if player.Character then
+		task.spawn(watchCharacter, player.Character)
+	end
+	table.insert(
+		connections,
+		player:GetAttributeChangedSignal("BattleReducedMotion"):Connect(function()
+			BattleSettings.reducedMotion = player:GetAttribute("BattleReducedMotion") == true
+		end)
+	)
+	BattleSettings.reducedMotion = player:GetAttribute("BattleReducedMotion") == true
+	table.insert(
+		connections,
+		player:GetAttributeChangedSignal("InBattle"):Connect(function()
+			if player:GetAttribute("InBattle") ~= true then
+				local token = epoch
+				task.delay(3, function()
+					if
+						not destroyed
+						and token == epoch
+						and inBattle
+						and player:GetAttribute("InBattle") ~= true
+					then
+						leave(true)
+					end
+				end)
+			end
+		end)
+	)
+	local working = false
+	table.insert(
+		connections,
+		Remotes.Get("Battle").OnClientEvent:Connect(function(newView)
+			if destroyed then
+				return
+			end
+			if not inBattle and #queue == 0 and not working and newView.result then
+				return
+			end
+			if inBattle then
+				for _, event in newView.events or {} do
+					if event.effect == "switch" then
+						invalidate()
+						break
+					end
+				end
+			end
+			table.insert(queue, newView)
+			if working then
+				return
+			end
+			working = true
+			task.spawn(function()
+				while #queue > 0 and not destroyed do
+					local nextView = table.remove(queue, 1)
+					local ok, problem = xpcall(function()
+						if not inBattle and not begin(nextView) then
+							return
+						end
+						if inBattle then
+							play(nextView)
+						end
+					end, debug.traceback)
+					if not ok then
+						warn("[BattleScreen] " .. tostring(problem))
+						leave(true)
+					end
+				end
+				working = false
+			end)
+		end)
+	)
+	gui.Destroying:Connect(function()
+		destroyed = true
+		leave(true)
+		Fx.Destroy()
+		if design then
+			design:Destroy()
+		end
+		if death then
+			death:Disconnect()
+		end
+		for _, connection in connections do
+			connection:Disconnect()
+		end
 	end)
 
+	if design then
+		-- Retain the fallback widgets and their existing control flow, outside the visible design.
+		local legacy = Instance.new("Frame")
+		legacy.Name = "LegacyVisuals"
+		legacy.Visible = false
+		legacy.Size = UDim2.fromScale(1, 1)
+		for _, child in gui:GetChildren() do
+			if child:IsA("GuiObject") then
+				child.Parent = legacy
+			end
+		end
+		legacy.Parent = gui
+	end
 	gui.Parent = player:WaitForChild("PlayerGui")
 end
 

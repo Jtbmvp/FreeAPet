@@ -35,8 +35,7 @@ end
 local Battle = {
 	enabled = false, -- published game: waits for the starters (decision 3)
 
-	maxLevel = 30,
-	statGrowthPerLevel = 0.1, -- stat = base * (1 + 0.1 * (level - 1))
+	maxLevel = require(script.Parent.Progression).pet.maxLevel,
 	damageScale = 0.4, -- damage = power * attack / defense * 0.4 * type * random
 	damageRandomMin = 0.85,
 
@@ -48,17 +47,9 @@ local Battle = {
 
 	-- Wild levels by biome and rarity: { min, max }.
 	wildLevels = {
-		Forest = { Common = { 1, 4 }, Uncommon = { 3, 6 }, Rare = { 6, 10 } },
+		Forest = { Common = { 1, 2 }, Uncommon = { 3, 6 }, Rare = { 6, 10 } },
 		Desert = { Common = { 5, 8 }, Uncommon = { 7, 10 }, Rare = { 10, 14 } },
 	} :: { [string]: { [string]: { number } } },
-
-	xp = {
-		winBase = 10, -- + perWildLevel * wild level, to each pet that fought
-		perWildLevel = 5,
-		captureFactor = 0.5, -- a capture gives half
-		toNextBase = 20, -- xp for the next level = toNextBase + toNextPerLevel * level
-		toNextPerLevel = 15,
-	},
 
 	capsule = {
 		price = 50, -- Cash
@@ -84,6 +75,30 @@ local Battle = {
 	},
 
 	species = {
+		Glimmouse = {
+			type = "Neutral",
+			hp = 60,
+			attack = 55,
+			defense = 45,
+			speed = 60,
+			moves = moves("Hop Kick", "Crystal Chime", "Gem Whip", "Neutral"),
+		},
+		Plazadillo = {
+			type = "Neutral",
+			hp = 55,
+			attack = 40,
+			defense = 80,
+			speed = 40,
+			moves = moves("Shell Roll", "Paving Slam", "Emerald Pulse", "Neutral"),
+		},
+		Spoutle = {
+			type = "Neutral",
+			hp = 55,
+			attack = 55,
+			defense = 50,
+			speed = 55,
+			moves = moves("Jet Splash", "Collar Star", "Fountain Geyser", "Neutral"),
+		},
 		AcornSquirrel = {
 			type = "Forest",
 			hp = 40,

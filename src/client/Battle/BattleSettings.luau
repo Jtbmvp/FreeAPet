@@ -5,4 +5,5 @@
 return {
 	shortIntro = false, -- countdown only, no hero shots
 	cameraShake = true,
+	reducedMotion = false, -- client attribute BattleReducedMotion may override during a session
 }

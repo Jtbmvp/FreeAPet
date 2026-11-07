@@ -1,20 +1,12 @@
 --!strict
--- Cinematic battle start (docs/BATTLE-POLISH-PLAN.md §5.1), about 5 s:
--- a wide shot as the ring draws itself, a hero shot of our pet, one of the
--- foe, 3-2-1, FIGHT! and the camera settles over the player's shoulder.
--- A click, tap or gamepad A skips to the end. The short version (Settings,
--- and owners joining to defend, whose turn timer is already running) only
--- does the countdown. Yields until the battle view is ready.
-
+-- Cancellable fitted shots; BattleCamera owns every camera write.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local UserInputService = game:GetService("UserInputService")
-
+local Input = game:GetService("UserInputService")
 local Config = require(ReplicatedStorage.Shared.Config)
-local BattleCamera = require(script.Parent.BattleCamera)
+local Camera = require(script.Parent.BattleCamera)
+local Settings = require(script.Parent.BattleSettings)
 local Common = require(script.Parent.Fx.Common)
-
-local BattleIntro = {}
-
+local Intro = {}
 export type Info = {
 	centre: CFrame,
 	arena: Instance?,
@@ -23,70 +15,95 @@ export type Info = {
 	mineCard: Common.CardInfo,
 	foeCard: Common.CardInfo,
 	short: boolean,
+	cancelled: (() -> boolean)?,
 }
-
-local SKIP_INPUTS = {
-	[Enum.UserInputType.MouseButton1] = true,
-	[Enum.UserInputType.Touch] = true,
-}
-
-function BattleIntro.Play(info: Info)
+function Intro.Play(info: Info): boolean
 	local skipped = false
-	local skipConnection = UserInputService.InputBegan:Connect(function(input)
-		if SKIP_INPUTS[input.UserInputType] or input.KeyCode == Enum.KeyCode.ButtonA then
+	local initialReduced = Settings.reducedMotion
+	local function aborted(): boolean
+		return info.cancelled ~= nil and info.cancelled()
+	end
+	local input = Input.InputBegan:Connect(function(key)
+		if
+			key.UserInputType == Enum.UserInputType.MouseButton1
+			or key.UserInputType == Enum.UserInputType.Touch
+			or key.KeyCode == Enum.KeyCode.ButtonA
+		then
 			skipped = true
 		end
 	end)
-	-- Waits, unless the player skips: then returns true at once.
 	local function sleep(seconds: number): boolean
-		local untilTime = os.clock() + seconds
-		while os.clock() < untilTime do
-			if skipped then
+		local deadline = os.clock() + seconds
+		while os.clock() < deadline do
+			if not initialReduced and Settings.reducedMotion then
+				skipped = true
+			end
+			if skipped or aborted() then
 				return true
 			end
 			task.wait()
 		end
-		return skipped
+		return skipped or aborted()
 	end
-
-	local closeBars = Common.Letterbox()
-	Common.Desaturate(0.45, 0.7)
-	local showRing = Common.RingReveal(info.arena, 0.55)
-	repeat
-		if not info.short then
-			BattleCamera.Move(BattleCamera.Wide(), 0.6)
-			if sleep(0.65) then
-				break
-			end
-			BattleCamera.Move(BattleCamera.Hero(info.mine, 1), 0.35, Enum.EasingStyle.Quad)
-			Common.Reveal(info.mine, info.mineCard, "left")
-			if sleep(1.3) then
-				break
-			end
-			BattleCamera.Move(BattleCamera.Hero(info.foe, -1), 0.35, Enum.EasingStyle.Quad)
-			Common.Reveal(info.foe, info.foeCard, "right")
-			if sleep(1.3) then
-				break
-			end
+	local closeBars: () -> () = function() end
+	local showRing: () -> () = function() end
+	local ok, problem = xpcall(function()
+		if aborted() then
+			return
 		end
-		BattleCamera.Move(BattleCamera.Approach(1.6), 0.45)
-		if Common.Countdown(sleep, function()
-			BattleCamera.Punch(-5, 0.2)
-		end) then
-			break
+		if not Settings.reducedMotion then
+			closeBars = Common.Letterbox()
+			Common.Desaturate(0.45, 0.7)
+			showRing = Common.RingReveal(info.arena, 0.55)
 		end
-		Common.FightSlam(info.centre.Position, Config.Battle.arenaRadius)
-		task.delay(0.14, BattleCamera.Shake, "medium")
-		BattleCamera.Move(BattleCamera.Gameplay(), 0.5)
-		sleep(0.45)
-	until true
-	skipConnection:Disconnect()
-	showRing()
-	if skipped then
-		BattleCamera.Move(BattleCamera.Gameplay(), 0.35)
-		task.wait(0.2)
+		repeat
+			if not info.short and not Settings.reducedMotion then
+				Camera.Move(Camera.Wide(), 0.6)
+				if sleep(0.65) then
+					break
+				end
+				Camera.Move(Camera.Hero(info.mine, 1), 0.35, Enum.EasingStyle.Quad)
+				Common.Reveal(info.mine, info.mineCard, "left")
+				if sleep(1.3) then
+					break
+				end
+				Camera.Move(Camera.Hero(info.foe, -1), 0.35, Enum.EasingStyle.Quad)
+				Common.Reveal(info.foe, info.foeCard, "right")
+				if sleep(1.3) then
+					break
+				end
+			end
+			if aborted() then
+				break
+			end
+			Camera.Move(Camera.Approach(1.6), 0.45)
+			if
+				Common.Countdown(sleep, function()
+					if not Settings.reducedMotion then
+						Camera.Punch(-5, 0.2)
+					end
+				end, Settings.reducedMotion)
+			then
+				break
+			end
+			if not Settings.reducedMotion then
+				Common.FightSlam(info.centre.Position, Config.Battle.arenaRadius, aborted)
+				Camera.Shake("medium")
+			end
+			Camera.Move(Camera.Gameplay(), 0.5)
+			sleep(0.45)
+		until true
+	end, debug.traceback)
+	input:Disconnect()
+	pcall(showRing)
+	pcall(closeBars)
+	if not ok then
+		warn("[BattleIntro] " .. tostring(problem))
 	end
-	closeBars()
+	if aborted() then
+		return false
+	end
+	Camera.Move(Camera.Gameplay(), if skipped then 0.2 else 0.35)
+	return true
 end
-
-return BattleIntro
+return Intro

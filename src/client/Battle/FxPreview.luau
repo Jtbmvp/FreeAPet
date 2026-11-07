@@ -48,45 +48,75 @@ local function place(model: Model, at: Vector3, lookAt: Vector3)
 	model.Parent = Workspace:FindFirstChild("Animals") or Workspace -- PetAnimator animates pets in Animals
 end
 
+local previewEpoch = 0
+function FxPreview.Cancel()
+	previewEpoch += 1
+	Fx.CancelAll()
+end
 function FxPreview.Play(attackerSpecies: string, move: string, targetSpecies: string?, effect: string?)
 	assert(RunService:IsStudio(), "FxPreview only runs in Studio")
+	assert(
+		not Players.LocalPlayer:GetAttribute("InBattle"),
+		"Do not take a participant's active battle camera"
+	)
+	previewEpoch += 1
+	local token = previewEpoch
 	local character = Players.LocalPlayer.Character
 	local root = character and character:FindFirstChild("HumanoidRootPart") :: BasePart?
 	assert(root, "no character")
-	local attacker = copyOf(attackerSpecies)
-	local target = copyOf(targetSpecies or attackerSpecies)
-	assert(attacker and target, "no live pet of that species to copy")
-
-	-- An arena 14 studs in front of the player, laid out like a battle.
-	local look = Vector3.new(root.CFrame.LookVector.X, 0, root.CFrame.LookVector.Z).Unit
-	local ground = root.Position - Vector3.new(0, 3, 0) + look * 14
-	local centre = CFrame.lookAt(ground, ground + look)
-	local mineAt = (centre * CFrame.new(LAYOUT.mine)).Position
-	local foeAt = (centre * CFrame.new(LAYOUT.foe)).Position
-	place(attacker, mineAt, foeAt)
-	place(target, foeAt, mineAt)
-	task.wait(0.3) -- let PetAnimator pick them up
-
-	BattleCamera.Begin(centre, attacker, target)
-	BattleCamera.Move(BattleCamera.Gameplay(), 0.4)
-	task.wait(0.6)
-	Fx.Play({
-		attacker = attacker,
-		target = target,
-		species = attackerSpecies,
-		move = move,
-		moveType = (Config.Battle.species[attackerSpecies] or { type = "Neutral" }).type,
-		effect = effect,
-		damage = 23,
-		impact = function() end,
-		clip = function()
-			return nil, nil
-		end,
-	})
-	task.wait(1)
-	attacker:Destroy()
-	target:Destroy()
-	BattleCamera.Release(0.4)
+	local attacker, target = copyOf(attackerSpecies), copyOf(targetSpecies or attackerSpecies)
+	local ticket: number? = nil
+	local function cancelled(): boolean
+		return token ~= previewEpoch
+			or Players.LocalPlayer.Character ~= character
+			or Players.LocalPlayer:GetAttribute("InBattle") == true
+	end
+	local ok, problem = xpcall(function()
+		assert(attacker and target, "no live pet of that species to copy")
+		local look = Vector3.new(root.CFrame.LookVector.X, 0, root.CFrame.LookVector.Z).Unit
+		local ground = root.Position - Vector3.new(0, 3, 0) + look * 14
+		local centre = CFrame.lookAt(ground, ground + look)
+		local mineAt, foeAt =
+			(centre * CFrame.new(LAYOUT.mine)).Position, (centre * CFrame.new(LAYOUT.foe)).Position
+		place(attacker, mineAt, foeAt)
+		place(target, foeAt, mineAt)
+		task.wait(0.3)
+		if cancelled() then
+			return
+		end
+		ticket = BattleCamera.Begin(centre, attacker, target)
+		BattleCamera.Move(BattleCamera.Gameplay(), 0.4)
+		task.wait(0.6)
+		Fx.Play({
+			attacker = attacker,
+			target = target,
+			species = attackerSpecies,
+			move = move,
+			moveType = (Config.Battle.species[attackerSpecies] or { type = "Neutral" }).type,
+			effect = effect,
+			damage = 23,
+			impact = function() end,
+			clip = function()
+				return nil, nil
+			end,
+			cancelled = cancelled,
+			onBeat = BattleCamera.OnBeat,
+		})
+	end, debug.traceback)
+	if token == previewEpoch then
+		Fx.Destroy()
+	end
+	if attacker then
+		attacker:Destroy()
+	end
+	if target then
+		target:Destroy()
+	end
+	if ticket then
+		BattleCamera.Release(0.4, ticket)
+	end
+	if not ok then
+		error(problem, 0)
+	end
 end
-
 return FxPreview

@@ -26,9 +26,7 @@ export type ResearchNode = {
 	hex: { number }, -- { q, r }
 	root: boolean?, -- open from the start
 	-- What the server reads (ResearchMath.Value): incomeMultiplier,
-	-- offlineIncomePercent, growthMultiplier, carryCapacity, walkSpeed,
-	-- maxLoose, researchTimeMultiplier, protection.<HazardId> (multiplier on
-	-- the meter's rise), releaseShieldSeconds.
+	-- offlineIncomePercent, carryCapacity, walkSpeed, researchTimeMultiplier.
 	effect: string,
 	levels: { ResearchLevel },
 }
@@ -102,24 +100,6 @@ local Research: { [string]: ResearchNode } = {
 			end,
 		}),
 	},
-	GrowthBoost = {
-		id = "GrowthBoost",
-		displayName = "Fast Growth",
-		icon = "upgrade",
-		category = "Economy",
-		hex = { -1, 1 },
-		effect = "growthMultiplier",
-		levels = curve({
-			maxLevel = 20,
-			cost = 120,
-			costGrowth = 1.25,
-			seconds = 30,
-			secondsGrowth = 1.18,
-			value = function(level)
-				return 1 + 0.05 * level
-			end,
-		}),
-	},
 
 	-- Utility (purple)
 	CarryCapacity = {
@@ -159,24 +139,6 @@ local Research: { [string]: ResearchNode } = {
 			end,
 		}),
 	},
-	LooseLimit = {
-		id = "LooseLimit",
-		displayName = "More Loose Pets",
-		icon = "release",
-		category = "Utility",
-		hex = { 2, -1 },
-		effect = "maxLoose", -- base is Config.Economy.maxLooseAnimals (2)
-		levels = curve({
-			maxLevel = 3,
-			cost = 600,
-			costGrowth = 4,
-			seconds = 120,
-			secondsGrowth = 3,
-			value = function(level)
-				return 2 + level
-			end,
-		}),
-	},
 	Accelerator = {
 		id = "Accelerator",
 		displayName = "Accelerator",
@@ -192,64 +154,6 @@ local Research: { [string]: ResearchNode } = {
 			secondsGrowth = 1.25,
 			value = function(level)
 				return 1 - 0.03 * level
-			end,
-		}),
-	},
-
-	-- Defense (blue)
-	HeatProtection = {
-		id = "HeatProtection",
-		displayName = "Heat Protection",
-		icon = "heat",
-		category = "Defense",
-		hex = { 2, 0 },
-		effect = "protection.Heat",
-		levels = curve({
-			maxLevel = 15,
-			cost = 80,
-			costGrowth = 1.28,
-			seconds = 20,
-			secondsGrowth = 1.2,
-			value = function(level)
-				return 1 - 0.05 * level
-			end,
-		}),
-	},
-	VisibilityProtection = {
-		id = "VisibilityProtection",
-		displayName = "Lantern",
-		icon = "darkness",
-		category = "Defense",
-		hex = { 1, 1 },
-		effect = "protection.LowVisibility",
-		levels = curve({
-			maxLevel = 15,
-			cost = 80,
-			costGrowth = 1.28,
-			seconds = 20,
-			secondsGrowth = 1.2,
-			value = function(level)
-				return 1 - 0.05 * level
-			end,
-		}),
-	},
-	-- Brief's "base protection", redefined for concept v2 (the base is always
-	-- safe): a freshly released pet cannot be stolen for a while.
-	ReleaseShield = {
-		id = "ReleaseShield",
-		displayName = "Release Shield",
-		icon = "shield",
-		category = "Defense",
-		hex = { 2, 1 },
-		effect = "releaseShieldSeconds",
-		levels = curve({
-			maxLevel = 10,
-			cost = 300,
-			costGrowth = 1.35,
-			seconds = 60,
-			secondsGrowth = 1.25,
-			value = function(level)
-				return 60 * level
 			end,
 		}),
 	},

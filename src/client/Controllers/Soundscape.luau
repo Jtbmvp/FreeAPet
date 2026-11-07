@@ -77,17 +77,6 @@ function Soundscape.Start()
 	end)
 	refresh()
 
-	task.spawn(function()
-		local battles = workspace:WaitForChild("Battles")
-		local point = battles:WaitForChild("HealPoint", 30)
-		local prompt = point and point:WaitForChild("HealPrompt", 5)
-		if prompt and prompt:IsA("ProximityPrompt") then
-			prompt.Triggered:Connect(function()
-				Sfx.Play("heal")
-			end)
-		end
-	end)
-
 	local carrying = player:GetAttribute("CarryCount") or 0
 	player:GetAttributeChangedSignal("CarryCount"):Connect(function()
 		local count = player:GetAttribute("CarryCount") or 0

@@ -52,6 +52,8 @@ function IndexTab.Mount(container: Frame)
 		return a.order < b.order
 	end)
 
+	-- UI grouping only; never added to Config.Biomes/wild spawns.
+	table.insert(biomes, 1, { id = "Starters", displayName = "Starters" })
 	local cards: { [string]: Card } = {}
 	for biomeOrder, biome in biomes do
 		local header = UITheme.Label(biome.displayName, 24, UITheme.colors.gold)
@@ -73,7 +75,7 @@ function IndexTab.Mount(container: Frame)
 		grid.Parent = row
 
 		for id, species in Config.Species do
-			if species.biome == biome.id then
+			if species.biome == biome.id or (biome.id == "Starters" and species.starter) then
 				local rarity = Config.Rarities[species.rarity]
 				local frame = Instance.new("Frame")
 				frame.Name = id

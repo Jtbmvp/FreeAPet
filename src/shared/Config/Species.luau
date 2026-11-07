@@ -10,7 +10,8 @@ export type Species = {
 	id: string,
 	displayName: string,
 	displayNamePT: string,
-	biome: string, -- key in Config.Biomes
+	biome: string?, -- nil for starters: no wild spawn biome
+	starter: boolean?,
 	rarity: Rarities.RarityId,
 	modelName: string,
 	spawnWeight: number, -- PLACEHOLDER: relative chance inside its biome
@@ -21,6 +22,37 @@ export type Species = {
 }
 
 local Species: { [string]: Species } = {
+	Glimmouse = {
+		id = "Glimmouse",
+		displayName = "Glimmouse",
+		displayNamePT = "Glimmouse",
+		rarity = "Starter",
+		starter = true,
+		modelName = "Glimmouse",
+		spawnWeight = 0,
+		heightStuds = 3.5,
+	},
+	Plazadillo = {
+		id = "Plazadillo",
+		displayName = "Plazadillo",
+		displayNamePT = "Plazadillo",
+		rarity = "Starter",
+		starter = true,
+		modelName = "Plazadillo",
+		spawnWeight = 0,
+		heightStuds = 4.5,
+	},
+	Spoutle = {
+		id = "Spoutle",
+		displayName = "Spoutle",
+		displayNamePT = "Spoutle",
+		rarity = "Starter",
+		starter = true,
+		modelName = "Spoutle",
+		spawnWeight = 0,
+		heightStuds = 4,
+	},
+
 	AcornSquirrel = {
 		id = "AcornSquirrel",
 		displayName = "Acorn Squirrel",

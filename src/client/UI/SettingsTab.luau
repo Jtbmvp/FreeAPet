@@ -30,6 +30,8 @@ local function row(parent: Instance, order: number, title: string): Frame
 end
 
 function SettingsTab.Mount(container: Frame)
+	local alive = true
+	local watcher: RBXScriptConnection? = nil
 	local layout = Instance.new("UIListLayout")
 	layout.Padding = UDim.new(0, 12)
 	layout.SortOrder = Enum.SortOrder.LayoutOrder
@@ -71,8 +73,11 @@ function SettingsTab.Mount(container: Frame)
 	toggle.ZIndex = 4
 	toggle.Parent = labels
 	task.spawn(function()
-		local animals = Workspace:WaitForChild("Animals")
-		animals.DescendantAdded:Connect(function(gui)
+		local animals = Workspace:WaitForChild("Animals", 15)
+		if not alive or not animals then
+			return
+		end
+		watcher = animals.DescendantAdded:Connect(function(gui)
 			if not showLabels then
 				task.defer(apply, gui)
 			end
@@ -104,6 +109,12 @@ function SettingsTab.Mount(container: Frame)
 	note.Parent = container
 
 	return {
+		Destroy = function()
+			alive = false
+			if watcher then
+				watcher:Disconnect()
+			end
+		end,
 		Show = function() end,
 		Hide = function() end,
 	}

@@ -36,6 +36,11 @@ export type Ctx = {
 	moveType: string, -- "Neutral" | "Forest" | "Desert"
 	effect: string?, -- "super" | "weak" | nil
 	damage: number,
+	cancelled: (() -> boolean)?,
+	pooled: boolean?,
+	presentationCancelled: boolean?,
+	reducedMotion: boolean?,
+	onBeat: ((string, any, any) -> ())?,
 	impact: () -> (), -- call once, at the hit: hit effects + HP bar
 	clip: (name: string) -> (number?, { [string]: number }?), -- plays the attacker's clip: length, markers
 }
@@ -46,6 +51,7 @@ local HITSTOP = { super = 0.1, normal = 0.06 }
 
 local folder: Folder? = nil
 local overlay: ScreenGui? = nil
+local transientLighting: { Instance } = {}
 
 local function world(): Folder
 	if folder and folder.Parent then
@@ -201,6 +207,7 @@ function Common.Desaturate(amount: number, seconds: number)
 	effect.Name = "BattleFxDesaturate"
 	effect.Saturation = -amount
 	effect.Parent = Lighting
+	table.insert(transientLighting, effect)
 	TweenService:Create(effect, TweenInfo.new(seconds, Enum.EasingStyle.Sine), { Saturation = 0 }):Play()
 	Debris:AddItem(effect, seconds + 0.1)
 end
@@ -321,7 +328,8 @@ function Common.Reveal(model: Model?, info: CardInfo, side: string)
 		return
 	end
 	local size = model:GetExtentsSize()
-	local feet = model:GetPivot().Position - Vector3.new(0, size.Y / 2, 0)
+	local box = model:GetBoundingBox()
+	local feet = box.Position - Vector3.new(0, size.Y / 2, 0)
 	Common.Shockwave(feet, math.max(size.X, size.Z) * 1.4 + 2, Common.TypeColor(info.moveType))
 	local highlight = Instance.new("Highlight")
 	highlight.FillTransparency = 1
@@ -331,7 +339,9 @@ function Common.Reveal(model: Model?, info: CardInfo, side: string)
 	highlight.Parent = world()
 	TweenService:Create(highlight, TweenInfo.new(0.8), { OutlineTransparency = 1 }):Play()
 	Debris:AddItem(highlight, 0.85)
-	hop(model, math.clamp(size.Y * 0.25, 0.6, 1.6))
+	if not model:GetAttribute("PetVariantKey") then
+		hop(model, math.clamp(size.Y * 0.25, 0.6, 1.6))
+	end
 end
 
 -- Text bigger than Roblox's 100 px limit: a label inside an enlarged frame.
@@ -376,25 +386,38 @@ end
 
 -- U03: 3, 2, 1. `sleep` waits and returns true if the player skipped;
 -- `onDigit` runs on each number (camera punch). Returns true if skipped.
-function Common.Countdown(sleep: (number) -> boolean, onDigit: (number) -> ()): boolean
+function Common.Countdown(sleep: (number) -> boolean, onDigit: (number) -> (), reduced: boolean?): boolean
 	local holder = scaled("Countdown", true)
 	local colors =
 		{ [3] = UITheme.colors.speed, [2] = UITheme.colors.gold, [1] = Color3.fromRGB(255, 90, 80) }
 	for number = 3, 1, -1 do
-		speedLines(holder)
+		if not reduced then
+			speedLines(holder)
+		end
 		local digit, pop = bigText(holder, tostring(number), colors[number], 1.7)
-		pop.Scale = 1.7
+		pop.Scale = if reduced then 1 else 1.7
 		local stroke = digit:FindFirstChildOfClass("UIStroke")
 		if stroke then
 			stroke.Thickness = 6
 		end
-		TweenService
-			:Create(pop, TweenInfo.new(0.2, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = 1 })
-			:Play()
+		if not reduced then
+			TweenService
+				:Create(
+					pop,
+					TweenInfo.new(0.2, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
+					{ Scale = 1 }
+				)
+				:Play()
+		end
 		onDigit(number)
 		local skipped = sleep(0.38)
+		if not holder.Parent then
+			return true
+		end
 		TweenService:Create(digit, TweenInfo.new(0.12), { TextTransparency = 1 }):Play()
-		TweenService:Create(pop, TweenInfo.new(0.12), { Scale = 0.7 }):Play()
+		if not reduced then
+			TweenService:Create(pop, TweenInfo.new(0.12), { Scale = 0.7 }):Play()
+		end
 		if stroke then
 			TweenService:Create(stroke, TweenInfo.new(0.12), { Transparency = 1 }):Play()
 		end
@@ -409,7 +432,7 @@ function Common.Countdown(sleep: (number) -> boolean, onDigit: (number) -> ()): 
 end
 
 -- U04: "FIGHT!" slams in with a white flash and a shockwave over the arena.
-function Common.FightSlam(centre: Vector3, radius: number)
+function Common.FightSlam(centre: Vector3, radius: number, cancelled: (() -> boolean)?)
 	local holder = scaled("Fight", true)
 	local text, pop = bigText(holder, "FIGHT!", nil, 1.6)
 	text.Rotation = -6
@@ -426,10 +449,16 @@ function Common.FightSlam(centre: Vector3, radius: number)
 		:Create(pop, TweenInfo.new(0.14, Enum.EasingStyle.Quad, Enum.EasingDirection.In), { Scale = 1 })
 		:Play()
 	task.delay(0.14, function()
+		if cancelled and cancelled() then
+			return
+		end
 		Common.Flash(0.15)
 		Common.Shockwave(centre, radius, Color3.fromRGB(255, 200, 90))
 	end)
 	task.delay(0.55, function()
+		if cancelled and cancelled() then
+			return
+		end
 		TweenService:Create(pop, TweenInfo.new(0.2), { Scale = 1.25 }):Play()
 		TweenService:Create(text, TweenInfo.new(0.2), { TextTransparency = 1 }):Play()
 		if stroke then
@@ -495,10 +524,18 @@ end
 -- U05: lean back, dash at the target with a trail, hit, hop back.
 -- `spin` turns the pet round while it dashes (Tail Smack, Spin Dash).
 function Common.DefaultAttack(ctx: Ctx, spin: number?)
+	-- Also covers the starters, which have no bespoke VFX module yet.
+	if ctx.move ~= "Tackle" and Common.PlayClip(ctx, "Attack_" .. ctx.move:gsub("[^%w]", "")) then
+		return
+	end
 	local root = ctx.attacker and ctx.attacker.PrimaryPart
 	if not root or not ctx.target then
 		ctx.impact()
 		return
+	end
+	-- The bone clip stays in place; this function remains the owner of the dash.
+	if ctx.attacker then
+		PetAnimator.PlayOnce(ctx.attacker, "Attack_Tackle")
 	end
 	local start = root.CFrame
 	local direction, distance = Common.Between(ctx.attacker, ctx.target)
@@ -683,17 +720,77 @@ function Common.DamageNumber(model: Model?, amount: number, effect: string?)
 	Debris:AddItem(gui, 0.95)
 end
 
--- Everything a hit shows, once per attack (Fx.Play calls this from impact).
+-- At most one damage label per target (two concurrent fighters), no Highlight,
+-- debris or old particle burst on pooled casts. All new particles live in EffectPool.
+local damageLabels: { [Model]: any } = {}
+function Common.ClearHitFeedback()
+	for model, label in damageLabels do
+		label.connection:Disconnect()
+		label.gui:Destroy()
+		damageLabels[model] = nil
+	end
+end
+local function boundedDamage(model: Model?, amount: number, reduced: boolean?)
+	if not model or not model.Parent or not model.PrimaryPart then
+		return
+	end
+	local previous = damageLabels[model]
+	if previous then
+		previous.connection:Disconnect()
+		previous.gui:Destroy()
+	end
+	local gui = Instance.new("BillboardGui")
+	gui.Name = "PooledHitDamage"
+	gui.Adornee = model.PrimaryPart
+	gui.Size = UDim2.fromScale(4, 2)
+	gui.StudsOffsetWorldSpace = Vector3.new(0, model:GetExtentsSize().Y / 2 + 1, 0)
+	gui.LightInfluence = 0
+	local text = UITheme.Label(`-{Format.Short(amount)}`, 40, Color3.new(1, 1, 1))
+	text.TextScaled = true
+	text.Size = UDim2.fromScale(1, 1)
+	text.Parent = gui
+	gui.Parent = screen()
+	local started, base = os.clock(), gui.StudsOffsetWorldSpace
+	local entry: any = { gui = gui, connection = nil }
+	damageLabels[model] = entry
+	entry.connection = RunService.PreRender:Connect(function()
+		local alpha = math.clamp((os.clock() - started) / 0.8, 0, 1)
+		if alpha >= 1 or not model.Parent then
+			entry.connection:Disconnect()
+			gui:Destroy()
+			if damageLabels[model] == entry then
+				damageLabels[model] = nil
+			end
+			return
+		end
+		if not reduced then
+			gui.StudsOffsetWorldSpace = base + Vector3.new(0, alpha, 0)
+		end
+		text.TextTransparency = math.max(0, (alpha - 0.5) * 2)
+	end)
+end
 function Common.Hit(ctx: Ctx)
-	Common.Impact(ctx)
-	Common.HitFlash(ctx.target)
-	Common.DamageNumber(ctx.target, ctx.damage, ctx.effect)
+	if ctx.cancelled and ctx.cancelled() then
+		return
+	end
+	if ctx.target then
+		PetAnimator.PlayOnce(ctx.target, "Hit")
+	end
+	if ctx.pooled then
+		boundedDamage(ctx.target, ctx.damage, ctx.reducedMotion)
+	else
+		Common.Impact(ctx)
+		if not ctx.reducedMotion then
+			Common.HitFlash(ctx.target)
+		end
+		Common.DamageNumber(ctx.target, ctx.damage, ctx.effect)
+	end
 	local stop = HITSTOP[ctx.effect or "normal"]
 	if stop then
 		PetAnimator.Freeze(ctx.attacker, stop)
 		PetAnimator.Freeze(ctx.target, stop)
 	end
-	if ctx.effect ~= "weak" then
+	if ctx.effect ~= "weak" and not ctx.reducedMotion then
 		BattleCamera.Shake(if ctx.effect == "super" then "medium" else "light")
 	end
 end
@@ -903,6 +1000,25 @@ function Common.InFront(ctx: Ctx, gap: number): CFrame
 	local direction, distance = Common.Between(ctx.attacker, ctx.target)
 	local spot = root.Position + direction * math.max(distance - gap, 0)
 	return root.CFrame.Rotation + spot
+end
+
+-- Battle/session owner calls this on abort, switch and final teardown.
+function Common.ClearVisuals()
+	Common.ClearHitFeedback()
+	if folder then
+		folder:Destroy()
+		folder = nil
+	end
+	if overlay then
+		overlay:Destroy()
+		overlay = nil
+	end
+	for _, effect in transientLighting do
+		if effect.Parent then
+			effect:Destroy()
+		end
+	end
+	table.clear(transientLighting)
 end
 
 return Common
