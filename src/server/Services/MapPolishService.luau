@@ -28,7 +28,13 @@ local function textureFor(folder: string): string?
 end
 
 function MapPolishService.Start()
-	local art = Workspace:WaitForChild("Map"):WaitForChild("Art")
+	-- Timeouts so a missing map piece warns instead of stalling every later service.
+	local map = Workspace:WaitForChild("Map", 10)
+	local art = map and map:WaitForChild("Art", 5)
+	if not art then
+		warn("[MapPolish] Workspace.Map.Art not found: no texture swap")
+		return
+	end
 	local swapped = 0
 	for _, part in art:GetDescendants() do
 		if part:IsA("MeshPart") and part.Parent then

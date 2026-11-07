@@ -404,7 +404,13 @@ function AnimalService.Start()
 			end
 		end
 	end)
-	collectSpawnAreas(workspace:WaitForChild("Map"))
+	-- Timeouts so a missing map piece warns instead of stalling every later service.
+	local map = workspace:WaitForChild("Map", 10)
+	if map then
+		collectSpawnAreas(map)
+	else
+		warn("[AnimalService] Workspace.Map not found: no wild spawns")
+	end
 
 	local folder = Instance.new("Folder")
 	folder.Name = "Animals"
