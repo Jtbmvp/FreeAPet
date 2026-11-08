@@ -136,3 +136,7 @@ Registo das decisões tomadas fora do brief (ou que o alteram). O brief original
 ### 2026-11-07 — Rumo do jogo e sincronização (JB)
 - O jogo já não é de roubar pets: o núcleo é batalhar com eles. Revoga as decisões de roubo anteriores.
 - Sincronização pela MCP do Studio; o plugin do Rojo já não é usado. O `rojo` fica só como compilador local em `scripts/build-sync.sh`.
+
+### 2026-11-08 — Upload de assets pela Open Cloud (Astra, a pedido do dc0sta)
+- Revoga "o upload por MCP não funciona": imagens, modelos e áudio sobem com `scripts/opencloud-upload.ps1` (chave Open Cloud local, fora do Git) para o grupo jot4b Productions; o Studio usa os IDs (`insert_asset` nos modelos, `rbxassetid://` nas texturas). Guia: `docs/agent-workflow/OPEN-CLOUD-UPLOAD.md`.
+- As imagens sobem como `Image`, para o ID servir logo em `TextureID`/`Image`.
