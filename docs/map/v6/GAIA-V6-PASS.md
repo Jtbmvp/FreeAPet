@@ -48,6 +48,14 @@ Não mexi em `Map.Zones`, `Map.SpawnAreas`, `Map.Bases`, `Map.FX.V3Presentation`
    - O portal (não a pedra) tem agora 3 camadas: fundo escuro, corpo luminoso e pele `ForceField` animada. Tem ainda um vórtice de partículas, névoa a sair, um anel de runas e luz.
    - Detalhes de arena (`ArenaDetails`): um anel embutido no chão com linha central e emblema, cantos vermelho e azul com estandartes, pilaretes e 2 tochas.
 
+## Complemento (2.º pedido da Astra)
+- Os caminhos para a Dark Forest passaram a ter 3 ladrilhos de largura, cerca de 14 studs (`PathTile_Dark*_Wide`):
+  - o oeste alarga para o lado oposto ao planalto;
+  - os 3 arcos de entrada abriram 2,5 studs de cada lado;
+  - afastei um pinheiro do caminho oeste.
+- No caminho alargado não fica nenhum obstáculo com colisão. No playtest, o pathfinding com raio 4 passa nas 3 entradas.
+- Quarentena: o `cloud_257463543.SkyboxInserter` e o `cloud_319094400.WeatherScript` não estão no DataModel. São plugins do Studio, que aparecem na consola ao dar Play. Não há nenhum script no place com `require(<id>)`, `loadstring`, `getfenv` ou `InsertService`. Para os tirar, desinstalem-nos em Plugins > Manage Plugins.
+
 ## Nevoeiro e luz por zona (`src/client/MapV6Mood.client.luau`)
 - O script antigo procurava `Workspace.NewMap_V6`, que não existe, por isso nunca fazia nada.
 - Agora encontra o `Map.Collision.NewMap_V6` e usa limites absolutos iguais aos `Map.Zones`.
