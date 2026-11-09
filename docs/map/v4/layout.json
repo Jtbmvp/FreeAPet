@@ -1,61 +1,219 @@
 {
- "version": "V4-draft-1",
+ "version": "V4-draft-2",
  "author": "Gaia (MIDAS)",
+ "date": "2026-11-08",
+ "sources": ["docs/DECISIONS.md", "docs/map/v4/CONTRACT.md", "docs/map/v4/ART.md (4f02d61)"],
  "notes": [
-  "Rascunho antes do CONTRACT.md (Forge) e do ART.md (Iris); medidas em studs, eixo X = ilhas lado a lado como no V3.",
-  "Valores marcados measureFromV3 são lidos do V3 no levantamento do bloco 1 (nunca coordenadas adivinhadas).",
-  "Tudo é construído em Workspace.MapV4_Staging com offset stagingOffset; o corte move o staging para a origem."
+  "Alinhado com o ART.md: o ART.md manda nas cores, nos materiais, na luz e nas posições; o CONTRACT.md manda nos nomes, nos atributos e nas pastas.",
+  "Medidas em studs. Origem = centro da fonte (0,0). Eixo X = Safe Zone, Forest e Desert lado a lado; norte = +Z.",
+  "Construído em Workspace.MapV4_Staging com stagingOffset; o corte move o staging para a origem. Ver README §Decisões.",
+  "Cores em hex '#RRGGBB'. O antigo rascunho (X -205..1140, paleta do exemplo do studify) foi substituído."
  ],
  "stagingRoot": "MapV4_Staging",
  "stagingOffset": [0, 0, 3000],
  "groundY": 0,
  "minSurfaceGap": 0.1,
- "materialVariants": { "structure": "Studs", "fill": "Universal", "rockTop": "Inlet" },
- "contractFolders": ["Collision", "Zones", "SpawnAreas", "Bases", "FX"],
- "islands": [
-  {
-   "id": "SafeZone",
-   "block": 1,
-   "rect": { "minX": -205, "maxX": 205, "minZ": -240, "maxZ": 240 },
-   "terrain": { "top": "Grass", "path": "Pavement", "edge": "Sand", "strata": ["Sandstone", "Rock"], "depth": 24 },
-   "palette": { "grass": [126, 179, 60], "path": [176, 170, 210], "dirt": [232, 126, 120], "accent": [255, 196, 64] },
-   "features": {
-    "fountain": { "center": [0, 0], "radius": 18, "measureFromV3": "landmarks.spawn_fountain", "healPoint": true, "beacon": "FountainBeacon" },
-    "bases": { "count": 5, "measureFromV3": "Collision.base_1..base_5 + Map.Bases", "gate": true, "plotFloorAboveGround": 1.0 },
-    "spawns": { "measureFromV3": "Collision.Spawns + Map.SpawnAreas" },
-    "leaderboards": { "measureFromV3": "plaza.leaderboard_frame" }
-   },
-   "zones": ["Zone_SafeZone", "Zone_Base_*"]
+ "grid": { "position": 0.1, "rotationDeg": 15, "massesWholeStuds": true },
+
+ "bounds": { "minX": -225, "maxX": 1025, "minZ": -242, "maxZ": 242, "size": [1250, 485] },
+
+ "materialVariants": {
+  "available": ["Studs", "Universal", "Inlet"],
+  "structure": "Studs",
+  "massesAndPanels": "Universal",
+  "rocks": { "variant": null, "topSurface": "Inlet" },
+  "smallPartsUnder": 0.5,
+  "smallParts": "Plastic liso, sem variante",
+  "neon": "só acentos finos e pads"
+ },
+
+ "contractFolders": {
+  "required": ["SpawnAreas", "Zones", "Bases", "Art"],
+  "recommended": ["Collision", "FX"],
+  "invisibleVolumesCanQuery": false,
+  "decorInArt": true,
+  "battleHideableTag": "BattleHideable (só props dentro de Collision; nunca chão, falésias nem peças grandes)"
+ },
+
+ "terrain": {
+  "materialColors": {
+   "Grass": "#6FD86B",
+   "Pavement": "#D9DEEA",
+   "Cobblestone": "#A3AEC0",
+   "Slate": "#8F9BB0",
+   "LeafyGrass": "#43AD3B",
+   "Ground": "#8A5A3B",
+   "Mud": "#5E4A36",
+   "Rock": "#6E7A70",
+   "Sand": "#F2BD63",
+   "Sandstone": "#D9733A",
+   "Limestone": "#F6CF74",
+   "Concrete": "#B9532E",
+   "Salt": "#F4EAD3"
   },
-  {
-   "id": "Forest",
-   "block": 2,
-   "rect": { "minX": 255, "maxX": 730, "minZ": -240, "maxZ": 240 },
-   "terrain": { "top": "Grass", "path": "Ground", "edge": "Mud", "strata": ["Sandstone", "Rock"], "depth": 26 },
-   "palette": { "grass": [84, 175, 59], "leaf": [77, 161, 54], "trunk": [232, 126, 120], "path": [207, 109, 76], "accent": [255, 90, 90] },
-   "features": {
-    "river": { "measureFromV3": "terrain Water", "levels": 2 },
-    "clearings": { "measureFromV3": "Collision.clearings", "count": 6 },
-    "trees": { "recipe": "voxel-blob", "ringTrees": 14, "fieldTrees": 6 },
-    "mushroomHollow": { "measureFromV3": "scatter:mushroom_hollow" }
-   },
-   "zones": ["Zone_Forest*"]
-  },
-  {
-   "id": "Desert",
-   "block": 3,
-   "rect": { "minX": 730, "maxX": 1140, "minZ": -240, "maxZ": 240 },
-   "terrain": { "top": "Sand", "path": "Sandstone", "edge": "Salt", "strata": ["Sandstone", "Rock"], "depth": 26 },
-   "palette": { "sand": [236, 206, 150], "rock": [207, 109, 76], "mesa": [232, 126, 120], "cactus": [84, 175, 59], "accent": [255, 196, 64] },
-   "features": {
-    "mesas": { "measureFromV3": "terrace.mesa_wall" },
-    "clearings": { "measureFromV3": "Collision.clearings" },
-    "trees": { "recipe": "palm", "count": 10 }
-   },
-   "zones": ["Zone_Desert*"]
+  "water": { "WaterColor": "#3FB6E8", "WaterTransparency": 0.35, "WaterWaveSize": 0.05, "WaterWaveSpeed": 4, "WaterReflectance": 0.05 },
+  "maxMaterialsPerView": 5,
+  "forbiddenOnSlopes": ["Brick", "WoodPlanks"],
+  "studOverrides": {
+   "status": "a verificar no Studio (ponto da Iris)",
+   "variants": ["TerrainGrassStud", "TerrainSandStud", "..."],
+   "source": "assets/map-textures/ (2x2 studs por azulejo, ColorMap neutra)",
+   "applyOnlyAtCutover": true,
+   "reason": "os overrides do MaterialService são globais e mudariam o Terrain do V3"
   }
+ },
+
+ "zones": [
+  { "id": "Base",   "rect": { "minX": -200, "maxX": 200,  "minZ": -200, "maxZ": 200 }, "y": [-30, 150] },
+  { "id": "Forest", "rect": { "minX": 200,  "maxX": 560,  "minZ": -215, "maxZ": 215 }, "y": [-30, 150] },
+  { "id": "Desert", "rect": { "minX": 560,  "maxX": 1000, "minZ": -215, "maxZ": 215 }, "y": [-30, 150] }
  ],
- "rim": { "recipe": "plateau-masses", "minHeight": 16, "tallHeight": [23, 27], "overlap": 0.2, "noGaps": true },
- "bridges": { "measureFromV3": "paths.stone_bridge_long + paths.wooden_bridge", "recipe": "arched-wood" },
- "lighting": { "preset": "bright-cartoon", "clockTime": 13.5, "brightness": 2.5, "measureFromV3": "Lighting (FreeAPet* effects)" }
+
+ "rim": {
+  "segments": [
+   { "id": "West",    "rect": { "minX": -225, "maxX": -200, "minZ": -242, "maxZ": 242 }, "style": "SafeZone" },
+   { "id": "East",    "rect": { "minX": 1000, "maxX": 1025, "minZ": -242, "maxZ": 242 }, "style": "Desert" },
+   { "id": "SafeN",   "rect": { "minX": -200, "maxX": 200,  "minZ": 200,  "maxZ": 242 }, "style": "SafeZone" },
+   { "id": "SafeS",   "rect": { "minX": -200, "maxX": 200,  "minZ": -242, "maxZ": -200 }, "style": "SafeZone" },
+   { "id": "ForestN", "rect": { "minX": 200,  "maxX": 560,  "minZ": 215,  "maxZ": 242 }, "style": "Forest" },
+   { "id": "ForestS", "rect": { "minX": 200,  "maxX": 560,  "minZ": -242, "maxZ": -215 }, "style": "Forest" },
+   { "id": "DesertN", "rect": { "minX": 560,  "maxX": 1000, "minZ": 215,  "maxZ": 242 }, "style": "Desert" },
+   { "id": "DesertS", "rect": { "minX": 560,  "maxX": 1000, "minZ": -242, "maxZ": -215 }, "style": "Desert" }
+  ],
+  "styles": {
+   "SafeZone": "muralha de pedra #8F9BB0 (banda #7D889C) + colinas Slate",
+   "Forest": "falésias Rock #6E7A70 com pinheiros escalonados #196647 nos topos",
+   "Desert": "mesas Sandstone com estratos #D9733A/#B9532E e topo Limestone #F6CF74"
+  },
+  "minHeight": 16, "tallHeight": [23, 27], "overlap": 0.2, "noGaps": true
+ },
+
+ "safeZone": {
+  "fountain": {
+   "name": "spawn_fountain", "center": [0, 0], "plazaDiameter": 100, "plazaMaterial": "Pavement",
+   "tiers": 3, "height": [26, 28], "steps": [0.5, 0.5], "beacon": "FountainBeacon",
+   "beaconRule": ">= 1,5x a peça mais alta da zona; visível de todos os portões",
+   "accent": "#FFC83D", "streaming": "Persistent"
+  },
+  "bases": {
+   "size": [100, 100], "floorAboveTerrain": 1.0, "floor": "pad Universal, relva clara",
+   "fence": { "height": 3.5, "post": [1, 3.5, 1], "postSpacing": 6, "rails": 2, "color": "#FFFFFF", "material": "Studs" },
+   "gateWidth": 12,
+   "sign": { "size": [8, 2.8], "height": 4, "labelName": "Label" },
+   "petArea": [76, 56],
+   "slots": { "count": 6, "size": [9, 9], "layout": "fila dupla junto ao fundo" },
+   "spawnInsideFromEntrance": 6,
+   "safeZoneBox": [100, 30, 100],
+   "accentOnlyOn": ["topo da cerca", "bandeira", "placa"],
+   "list": [
+    { "id": "B1", "PlotIndex": 1, "center": [-150, 150],  "entrance": "SE", "accent": "#FF6F91" },
+    { "id": "B2", "PlotIndex": 2, "center": [150, 150],   "entrance": "SW", "accent": "#FFC83D" },
+    { "id": "B3", "PlotIndex": 3, "center": [150, -150],  "entrance": "NW", "accent": "#B57CFF" },
+    { "id": "B4", "PlotIndex": 4, "center": [-150, -150], "entrance": "NE", "accent": "#FF8A3D" },
+    { "id": "B5", "PlotIndex": 5, "center": [0, 150],     "entrance": "S",  "accent": "#7A9BFF" }
+   ]
+  },
+  "corridorWidth": 50,
+  "boulevard": { "from": [0, 0], "to": [200, 0], "width": 30, "material": "Cobblestone" },
+  "leaderboard": { "position": [-176, 0], "facing": "+X", "rule": "nada alto entre o quadro e a fonte", "fixedBy": "Config.Gameplay" },
+  "southGarden": { "center": [0, -150], "pond": true, "kiosks": [2, 3], "awning": "bicolor às riscas", "gameplay": false },
+  "gateToForest": { "position": [200, 0], "opening": [24, 14], "stone": "#8F9BB0", "crenellations": true, "innerSide": "madeira e folhas da Forest" },
+  "trees": { "recipe": "voxel-blob", "kind": "cerejeira", "color": "#FF9CC8", "height": [15, 18], "count": 12, "where": "cantos entre bases e borda" },
+  "palette": {
+   "dominant": "#8F9BB0", "band": "#7D889C", "trim": "#F3F6FA", "fence": "#FFFFFF", "wood": "#8A5A3B",
+   "tallGrass": ["#6FD86B", "#4FBF55"], "stone": "#A3AEC0", "flowers": ["#FF9CC8", "#FF6F91"], "accent": "#FFC83D"
+  }
+ },
+
+ "forest": {
+  "mainPath": { "points": [[200, 0], [450, 0], [560, 0]], "width": 24, "material": "Ground", "maxStraightEdge": 20 },
+  "river": {
+   "waterfall": { "position": [430, 215], "drop": 24, "lakeDiameter": 40, "lakeCenter": [430, 195] },
+   "meanderX": [420, 480], "width": [16, 22], "depth": [2.5, 3.0],
+   "exit": [470, -215], "banks": "Mud", "steps": 2, "rapids": "pedras a meio",
+   "check": "o jogador tem de atravessar a vau; se nadar, baixar o fundo (ponto da Iris)"
+  },
+  "bridge": { "position": [450, 0], "width": 14, "recipe": "arco de madeira", "color": "#6B3F22" },
+  "clearings": [
+   { "name": "Mushroom Hollow",   "center": [290, 120],  "SpeciesId": "HoppingMushroom", "BiomeId": "Forest", "Rare": false },
+   { "name": "Squirrel Glade",    "center": [290, -120], "SpeciesId": "AcornSquirrel",   "BiomeId": "Forest", "Rare": false },
+   { "name": "Deer Meadow",       "center": [510, 120],  "SpeciesId": "BranchDeer",      "BiomeId": "Forest", "Rare": false },
+   { "name": "Hidden Rare Glade", "center": [520, -160], "SpeciesId": "BranchDeer",      "BiomeId": "Forest", "Rare": true, "trailWidth": 8 }
+  ],
+  "hero": { "name": "Grande Árvore", "position": [530, 160], "height": 55, "visibleFrom": "portão (200,0)", "streaming": "Persistent" },
+  "fogPockets": [
+   { "rect": { "minX": 480, "maxX": 560, "minZ": 150,  "maxZ": 215 } },
+   { "rect": { "minX": 480, "maxX": 560, "minZ": -215, "maxZ": -120 } }
+  ],
+  "trees": { "recipe": "voxel-blob", "trunkRatio": 0.4, "canopyLayers": 7, "height": [18, 32], "count": 45, "oneColorPerTree": true, "rimPines": "pinheiros escalonados só nos planaltos" },
+  "palette": {
+   "canopy": ["#2F9A3A", "#47AA42", "#267F32"], "trunk": ["#6B3F22", "#8A5A3B"], "pine": "#196647", "moss": "#4D9A3A",
+   "grass": ["#2E9E3E", "#3DBA4A"], "rock": ["#6E7A70", "#5B665D"], "flowers": ["#FFD23F", "#FF6F91"],
+   "mushroom": { "cap": "#E5432F", "stem": "#EFE2C6", "maxHeight": 2, "notIn": "SpawnAreas do HoppingMushroom" },
+   "accent": "#FFE58A"
+  }
+ },
+
+ "desert": {
+  "canyon": { "rect": { "minX": 560, "maxX": 600 }, "z": 0, "width": 30, "length": 40, "wallHeight": [20, 24], "material": "Sandstone", "role": "esconde a troca de luz e de céu" },
+  "mainPath": { "from": [600, 0], "to": [880, -50], "width": 24, "material": "Sandstone" },
+  "oasis": { "center": [880, -50], "lakeDiameter": 50, "ring": "Grass", "palms": [5, 7], "onlyGreenSpot": true },
+  "hero": { "name": "Sun Arch", "position": [840, 30], "height": 45, "span": 40, "overPath": true, "streaming": "Persistent" },
+  "mesas": { "rect": { "minX": 700, "maxX": 1000, "minZ": 80, "maxZ": 215 }, "height": [25, 40], "strata": ["#D9733A", "#B9532E"], "top": "#F6CF74" },
+  "dunes": { "rect": { "minX": 620, "maxX": 1000, "minZ": -215, "maxZ": -120 }, "height": [4, 10], "material": "Sand" },
+  "clearings": [
+   { "name": "Cactus Flats",    "center": [680, -120], "SpeciesId": "RunningCactus", "BiomeId": "Desert", "Rare": false },
+   { "name": "Scorpion Canyon", "center": [760, 140],  "SpeciesId": "BallScorpion",  "BiomeId": "Desert", "Rare": false },
+   { "name": "Camel Oasis",     "center": [900, -110], "SpeciesId": "SunCamel",      "BiomeId": "Desert", "Rare": false },
+   { "name": "Sun Hollow",      "center": [960, 150],  "SpeciesId": "SunCamel",      "BiomeId": "Desert", "Rare": true }
+  ],
+  "heatFx": { "effectId": "desert_dust", "where": ["dunas", "Sun Hollow"], "notIn": ["oásis"] },
+  "vegetation": { "saguaro": { "color": "#4F9C3F", "height": [15, 30] }, "pricklyPear": "#5CB042", "dryBush": "#B8884A", "bones": "#F4EAD3", "palmsOnlyAtOasis": true },
+  "palette": { "dominant": "#D9733A", "strata": "#B9532E", "mesaTop": "#F6CF74", "sand": "#F2BD63", "wood": "#8A5A3B", "frond": "#47AA42", "rock": "#C9824F", "flowers": "#FF9CC8", "accent": "#FFB347" }
+ },
+
+ "clearingRules": {
+  "diameter": 56, "flatTolerance": 0.5, "maxPropHeightInside": 6, "noCanopyAbove": true,
+  "spawnArea": { "shape": "Part retangular inscrita", "size": [38, 1, 38], "atGroundHeight": true, "CanQuery": false, "parent": "Map.SpawnAreas (filho direto)" },
+  "interactiveColor": "#4CC3FF"
+ },
+
+ "lihFolk": {
+  "role": "acento, <= 10 % dos props por zona",
+  "privateOnly": true, "noCreatorStore": true, "neverInGit": true, "noDataset": true,
+  "sky": { "primary": "Skies/clear_day_cumulus_007", "fallback": "Skies/clear_day_azure_004", "CelestialBodiesShown": true },
+  "props": [
+   { "use": "lanternas (PointLight V3WarmLamp)", "zones": ["SafeZone", "Desert"], "assets": ["Lantern_01", "Lantern_05", "Lantern_09"], "height": 1.8 },
+   { "use": "barris e caixotes", "zones": ["SafeZone", "Desert"], "assets": ["Barrel_01", "Barrel_04", "Crate_01", "Crate_05"], "maxPerZone": 8 },
+   { "use": "placas de direção", "zones": ["Forest", "Desert"], "assets": ["Sign_01", "Sign_05"], "maxMap": 6 },
+   { "use": "rochas de preenchimento", "zones": ["Forest"], "assets": ["Rock_03", "Rock_05", "Rock_09", "Boulder_07"], "max": 40, "notIn": ["clareiras", "Desert"] }
+  ],
+  "import": { "unitsPerStud": 1, "color": "#FFFFFF", "Anchored": true, "CanCollide": false, "CanQuery": false, "CollisionFidelity": "Box", "RenderFidelity": "Automatic", "cloneInStudio": true }
+ },
+
+ "lighting": {
+  "global": { "LightingStyle": "Soft", "PrioritizeLightingQuality": false, "ClockTime": 15.6, "GeographicLatitude": 25, "effects": ["FreeAPetAtmosphere", "FreeAPetBloom", "FreeAPetColor", "FreeAPetSunRays", "Sky"], "oneSky": true },
+  "profilesSource": "ART.md §4.2 (colar o JSON como está em Map.FX.V3Presentation.LightingProfiles)",
+  "mobileOverridesSource": "ART.md §4.3",
+  "localLights": { "name": "V3WarmLamp", "maxMap": 26, "shadows": false }
+ },
+
+ "budget": {
+  "SafeZone": { "parts": 6000, "tris": 150000, "packMeshes": 120, "lights": 14, "emitters": 10 },
+  "Forest":   { "parts": 7000, "tris": 200000, "packMeshes": 150, "lights": 4,  "emitters": 15 },
+  "Desert":   { "parts": 5500, "tris": 150000, "packMeshes": 120, "lights": 8,  "emitters": 12 },
+  "Rim":      { "parts": 1500, "tris": 40000,  "packMeshes": 0,   "lights": 0,  "emitters": 0 },
+  "Map":      { "parts": 20000, "tris": 540000, "lights": 26 },
+  "perTreeParts": 60, "perSmallPropParts": 30,
+  "streaming": { "StreamingEnabled": true, "mode": "Opportunistic", "Improved": true, "PauseOutsideLoadedArea": true, "heroes": "Persistent", "rest": "Atomic" }
+ },
+
+ "openChecks": [
+  "Studio: a cor do Terrain tinge bem as variantes de studs? (overrides globais: ligar só no corte)",
+  "Studio: o rio com 2,5-3 de fundo atravessa-se a vau?",
+  "ART.md: o esboço põe a Camel Oasis em (900,-90) e a tabela em (900,-110); uso a tabela (fica a 7 studs do lago do oásis).",
+  "As dunas (z -120..-215) cobrem metade da Cactus Flats e da Camel Oasis: as clareiras ficam planas (±0,5) e as dunas contornam-nas.",
+  "Grande Árvore a 41 studs do centro do Deer Meadow (raio 28): copa com raio <= 12 do lado da clareira para não ficar por cima.",
+  "Lago da cascata Ø 40: centro em (430,195) para caber dentro da Forest (a cascata fica na falésia norte, z 215)."
+ ]
 }

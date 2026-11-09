@@ -19,7 +19,7 @@ código atual de `src/`.
   `Universal` e `Inlet`, medido a 2026-11-07). Estrutura → `Studs`; grandes superfícies e massas → `Universal`.
   Neon só como acento.
 - Grelha de 0,1 stud; rotações em passos de 15°; massas em studs inteiros.
-- Mapa com altitude: ilhas flutuantes, anel de planaltos sem buracos (≥ 16 studs), nada no mesmo plano.
+- Mapa com altitude: anel de planaltos sem buracos (≥ 16 studs), nada no mesmo plano.
 - Decoração: `Anchored`, com `CanCollide`, `CanTouch` e `CanQuery` desligados. Gameplay (zonas, bases, HealPoint)
   simples e legível.
 - Assets do LihFolk: só carregados no Roblox como **privados**; nenhum ficheiro do pack entra no Git; o
@@ -34,7 +34,7 @@ código atual de `src/`.
    = Z +3000) para não tocar no V3. No corte: o Terrain do V3 vai para um `TerrainRegion` em
    `ServerStorage.MapV3_Backup_<data>` (`CopyRegion`), a região do V4 é colada na origem
    (`PasteRegion`) e o staging é movido −offset.
-3. **Layout:** manter as três ilhas do V3 (Safe Zone, Forest, Desert, ao longo de X) para não partir
+3. **Layout:** resolvido pelo ART.md (4f02d61): três zonas ao longo de X, mapa de 1250 × 485 (X −225…1025), fonte em (0,0). O `layout.json` V4-draft-2 segue o ART.md.
    distâncias e streaming, ou refazê-lo. O rascunho mantém a disposição e as escalas.
 
 ## Blocos (4 h cada, bloqueio do Atlas através da Astra)
