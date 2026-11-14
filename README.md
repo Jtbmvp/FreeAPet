@@ -15,6 +15,9 @@ src/client/   → StarterPlayerScripts.Client    (input e UI)
 tests/        → testes
 docs/         → decisões, batalhas, escala, workflow dos agentes
 scripts/      → sincronização, publicação limpa, exportações e texturas
+sync/         → projetos Rojo usados pelo build-sync (Shared, Server, Client, mapa, pets)
+assets/       → fontes das texturas do mapa e dos ícones da UI
+design/       → fontes do mapa V2 e dos pets
 ```
 
 Os números do jogo estão em `src/shared/Config/`.
