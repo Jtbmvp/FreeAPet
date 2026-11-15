@@ -206,7 +206,7 @@ local function send(battle, side, raw, result: string?)
 		timeout = TURN_TIMEOUT,
 		role = "attacker",
 		kind = "pvp",
-		foeName = opp.name .. "'s " .. speciesName(current(opp).record),
+		foeName = speciesName(current(opp).record), -- the trainer's name is in the battle texts
 		foeTrainer = opp.player and opp.player.Character or nil,
 	})
 end
