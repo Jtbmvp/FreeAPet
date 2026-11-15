@@ -30,7 +30,8 @@ Estes ficheiros são a fonte dos scripts que vivem no Studio **fora** das pastas
 - Regras: os dois escolhem ao mesmo tempo (ataque, troca ou desistência). As trocas acontecem primeiro e ataca primeiro o pet mais rápido (empate: moeda ao ar). Um pet KO é substituído pelo seguinte; sem pets vivos, perde. Sem escolha em 30 s, faz um ataque aleatório; dois tempos esgotados seguidos contam como desistência. Sair do jogo também conta como desistência.
 - Cada pet começa com o HP cheio e nada é gravado: não se perde HP nem se ganha XP ou itens.
 - Para procurar ou entrar numa sala é preciso ter pelo menos um pet na equipa.
-- Posições: o vermelho é o lado 1 e o azul o lado 2, frente a frente à volta do `Markers.Center` do coliseu, com o mesmo layout (`Config.Battle.layout`) das batalhas contra selvagens.
+- Posições: o vermelho é o lado 1 e o azul o lado 2, frente a frente à volta do `Markers.Center` do coliseu, com o mesmo layout (`Config.Battle.layout`) das batalhas contra selvagens. Cada jogador fica ao lado do seu pet, virado para o pet do adversário, por isso cada um vê o outro jogador junto ao pet contra o qual está a lutar.
+- O HP desce durante a batalha (os ataques tiram vida e o pet KO desmaia). No fim, o dano não fica gravado: o pet volta com a vida cheia. Os prémios ainda não estão definidos.
 - Teste no Studio: com `workspace.MM_StudioBotBattle = true`, o único jogador do teste luta contra um bot que copia a equipa dele.
 
 ## O que mudou nos scripts que já existiam (só no Studio)

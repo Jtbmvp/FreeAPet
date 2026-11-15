@@ -26,6 +26,9 @@ local TeamService = require(Services:WaitForChild("TeamService"))
 local AnimalService = require(Services:WaitForChild("AnimalService"))
 
 local LAYOUT = Config.Battle.layout
+-- Each trainer stands right beside their own pet (to its left, seen from their own side), so
+-- the opponent sees the other player next to the pet they are fighting.
+local TRAINER = Vector3.new(LAYOUT.mine.X - 4, 0, LAYOUT.mine.Z + 1)
 local TURN_TIMEOUT = 30
 local MAX_TIMEOUTS = 2
 local EVENT_SECONDS = 0.95 -- how long the client shows each event (BattleScreen)
@@ -207,7 +210,7 @@ local function send(battle, side, raw, result: string?)
 		role = "attacker",
 		kind = "pvp",
 		foeName = speciesName(current(opp).record), -- the trainer's name is in the battle texts
-		foeTrainer = opp.player and opp.player.Character or nil,
+		foeTrainer = if opp.player then opp.player.Character else battle.botTrainer,
 	})
 end
 
@@ -558,8 +561,10 @@ function PvpBattle.Start(p1: Player, p2: Player?, centre: CFrame, onEnd, opts)
 				hum.JumpHeight = 0
 			end
 			if char then
-				local standAt = groundAt(battle, (side.centre * CFrame.new(LAYOUT.player)).Position) + Vector3.new(0, 3, 0)
-				char:PivotTo(CFrame.lookAt(standAt, (side.centre * CFrame.new(0, 3, 0)).Position))
+				local standAt = groundAt(battle, (side.centre * CFrame.new(TRAINER)).Position) + Vector3.new(0, 3, 0)
+				local opp = otherSide(battle, side)
+				local facing = (opp.centre * CFrame.new(LAYOUT.mine)).Position -- the opponent pet
+				char:PivotTo(CFrame.lookAt(standAt, Vector3.new(facing.X, standAt.Y, facing.Z)))
 			end
 		end
 		stage(battle, side)
@@ -582,6 +587,28 @@ function PvpBattle.Start(p1: Player, p2: Player?, centre: CFrame, onEnd, opts)
 			end
 		end
 	end))
+
+	-- Studio test bot: a copy of the player stands as the bot's trainer (gone with the arena)
+	if opts.bot and p1.Character then
+		p1.Character.Archivable = true
+		local stand = p1.Character:Clone()
+		p1.Character.Archivable = false
+		if stand then
+			for _, d in stand:GetDescendants() do
+				if d:IsA("BasePart") then
+					d.Anchored = true
+				elseif d:IsA("Script") or d:IsA("LocalScript") then
+					d:Destroy()
+				end
+			end
+			stand.Name = "TestBotTrainer"
+			local at = groundAt(battle, (s2.centre * CFrame.new(TRAINER)).Position) + Vector3.new(0, 3, 0)
+			local look = (s1.centre * CFrame.new(LAYOUT.mine)).Position
+			stand:PivotTo(CFrame.lookAt(at, Vector3.new(look.X, at.Y, look.Z)))
+			stand.Parent = arena
+			battle.botTrainer = stand
+		end
+	end
 
 	-- intro
 	for _, side in battle.sides do
