@@ -108,7 +108,19 @@ local function placePet(battle, record, position: Vector3, lookAt: Vector3)
 		return
 	end
 	local ground = groundAt(battle, position)
-	local height = model:GetExtentsSize().Y / 2
+	-- Height of the pivot above the pet's lowest VISIBLE part. The model's extents include an
+	-- invisible RootPart that reaches below the feet, so extents/2 left pets floating.
+	local pivotY = model:GetPivot().Position.Y
+	local lowest = math.huge
+	for _, part in model:GetDescendants() do
+		if part:IsA("BasePart") and part.Transparency < 1 then
+			-- vertical half-extent of the (possibly rotated) part
+			local c, h = part.CFrame, part.Size / 2
+			local dy = math.abs(c.RightVector.Y) * h.X + math.abs(c.UpVector.Y) * h.Y + math.abs(c.LookVector.Y) * h.Z
+			lowest = math.min(lowest, part.Position.Y - dy)
+		end
+	end
+	local height = if lowest < math.huge then pivotY - lowest else model:GetExtentsSize().Y / 2
 	model.PrimaryPart.Anchored = true
 	model:PivotTo(CFrame.lookAt(ground + Vector3.new(0, height, 0), Vector3.new(lookAt.X, ground.Y + height, lookAt.Z)))
 end

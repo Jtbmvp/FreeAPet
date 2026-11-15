@@ -94,29 +94,47 @@ local function playerInfo(p: Player)
 	return { id = p.UserId, name = p.Name, display = p.DisplayName }
 end
 
-local function returnToLobby(player: Player, reason: string?)
+-- userId -> JobId of the public server the player came from (filled by the arena)
+local originOf: { [number]: string } = {}
+
+-- Sends the player back to the server they came from (or any public server if that one is
+-- gone or full). The game's BaseService spawns every arriving character on their own base.
+local function returnToLobby(player: Player, reason: string?, origin: string?)
 	if player.Parent ~= Players then
 		return
 	end
+	origin = origin or originOf[player.UserId]
 	send(player, { state = "returning", reason = reason })
 	if IS_STUDIO then
-		local lobby = workspace:FindFirstChild("ArenaLink")
-		local arrival = lobby and lobby:FindFirstChild("LobbyArrival")
-		if arrival and player.Character then
-			player.Character:PivotTo((arrival :: BasePart).CFrame + Vector3.new(0, 3.5, 0))
-		end
+		-- Studio: same server; a fresh character spawns on the player's base (BaseService)
 		send(player, { state = "idle" })
+		task.wait(0.5)
+		if player.Parent == Players then
+			player:LoadCharacter()
+		end
 		return
 	end
-	for attempt = 1, Config.TELEPORT_RETRIES do
-		local ok, err = pcall(function()
-			TeleportService:TeleportAsync(game.PlaceId, { player })
+	local function attempt(useOrigin: boolean): (boolean, any)
+		return pcall(function()
+			local options = Instance.new("TeleportOptions")
+			if useOrigin and origin and origin ~= "" and not origin:find("^studio") then
+				options.ServerInstanceId = origin
+			end
+			options:SetTeleportData({ mmReturn = Config.VERSION })
+			TeleportService:TeleportAsync(game.PlaceId, { player }, options)
 		end)
+	end
+	for n = 1, Config.TELEPORT_RETRIES do
+		-- first try the original server, then any public server
+		local ok, err = attempt(n == 1)
 		if ok then
 			return
 		end
-		warn("[Matchmaking] return teleport failed (" .. attempt .. "): " .. tostring(err))
-		task.wait(2 * attempt)
+		warn("[Matchmaking] return teleport failed (" .. n .. "): " .. tostring(err))
+		task.wait(2 * n)
+		if player.Parent ~= Players then
+			return
+		end
 	end
 	player:Kick("Could not return to the lobby. Please rejoin.")
 end
@@ -172,6 +190,9 @@ local function runArena(match, inServer: boolean)
 	local expected: { [number]: any } = {}
 	for _, info in ipairs(match.players) do
 		expected[info.id] = info
+		if type(info.server) == "string" then
+			originOf[info.id] = info.server
+		end
 	end
 	local started, ended = false, false
 	local connections = {}
@@ -371,6 +392,22 @@ local isReserved = game.PrivateServerId ~= "" and game.PrivateServerOwnerId == 0
 if isReserved then
 	workspace:SetAttribute("MM_ArenaServer", true) -- hide the HUD button straight away
 	-- the colosseum return portal (ArenaLinkServer) sends players to a public lobby server
+	-- a return that fails after starting (origin server full or closed): any public server
+	local returnFails: { [Player]: number } = {}
+	TeleportService.TeleportInitFailed:Connect(function(p, result, message)
+		returnFails[p] = (returnFails[p] or 0) + 1
+		warn(("[Matchmaking] return failed for %s (%s): %s"):format(p.Name, tostring(result), tostring(message)))
+		if returnFails[p] > Config.TELEPORT_RETRIES then
+			p:Kick("Could not return to the lobby. Please rejoin.")
+			return
+		end
+		task.wait(2)
+		pcall(function()
+			local options = Instance.new("TeleportOptions")
+			options:SetTeleportData({ mmReturn = Config.VERSION })
+			TeleportService:TeleportAsync(game.PlaceId, { p }, options)
+		end)
+	end)
 	local returnEvent = ReturnToLobby :: BindableEvent
 	returnEvent.Event:Connect(function(p: Player)
 		if not PvpBattle.IsBattling(p) then
@@ -676,8 +713,8 @@ local function startMatch(room)
 		local match = {
 			id = room.id,
 			players = {
-				{ id = room.hostId, name = room.hostName, display = room.hostDisplay, side = "red" },
-				{ id = room.guestId, name = room.guestName, display = room.guestDisplay, side = "blue" },
+				{ id = room.hostId, name = room.hostName, display = room.hostDisplay, side = "red", server = room.hostServer },
+				{ id = room.guestId, name = room.guestName, display = room.guestDisplay, side = "blue", server = room.guestServer },
 			},
 		}
 		local okMatch = try("write match", function()
