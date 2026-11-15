@@ -34,6 +34,15 @@ local MAX_TIMEOUTS = 2
 local EVENT_SECONDS = 0.95 -- how long the client shows each event (BattleScreen)
 local rng = Random.new()
 
+-- Rough time the battle screen takes to play a list of events (attacks run their effects).
+local function playbackSeconds(raw): number
+	local t = 0
+	for _, e in raw do
+		t += if e.t == "attack" then 1.7 else EVENT_SECONDS
+	end
+	return t
+end
+
 local PvpBattle = {}
 
 local active: { [Player]: any } = {} -- player -> battle
@@ -406,25 +415,38 @@ local function resolveTurn(battle)
 	end
 
 	-- replace fainted pets / decide the winner
+	local replace = {}
 	for side in fainted do
 		local nextIndex = nextAlive(side)
 		if not nextIndex then
 			finish(battle, otherSide(battle, side), raw, "knockout")
 			return
 		end
-		side.active = nextIndex
-		-- the new pet steps in only when the clients reach this line, after the attack and the
-		-- faint have played; moving it at once showed it in the ring before the old one fell
-		local playedBefore = #raw
-		table.insert(raw, { t = "switch", side = side, name = speciesName(current(side).record) })
-		task.delay(playedBefore * EVENT_SECONDS + 0.6, function()
-			if not battle.ended then
-				stage(battle, side)
-			end
-		end)
+		replace[side] = nextIndex
+	end
+	if next(replace) == nil then
+		sendBoth(battle, raw, nil)
+		return
 	end
 
+	-- Two updates: first the attacks and the faint, still showing the pet that fell (the
+	-- battle screen animates the faint on the foe pet of the update it is playing), then,
+	-- once that has played, the next pet steps in with its own update.
 	sendBoth(battle, raw, nil)
+	local delay = playbackSeconds(raw) + 0.4
+	battle.busyUntil = os.clock() + delay + 0.5
+	task.delay(delay, function()
+		if battle.ended then
+			return
+		end
+		local entering = {}
+		for side, nextIndex in replace do
+			side.active = nextIndex
+			table.insert(entering, { t = "switch", side = side, name = speciesName(current(side).record) })
+			stage(battle, side)
+		end
+		sendBoth(battle, entering, nil)
+	end)
 end
 
 local function botChoice(side)
@@ -433,6 +455,10 @@ end
 
 local function loop(battle)
 	while not battle.ended do
+		-- a replacement pet may still be stepping in
+		while not battle.ended and os.clock() < (battle.busyUntil or 0) do
+			task.wait(0.1)
+		end
 		for _, side in battle.sides do
 			side.choice = if side.bot then botChoice(side) else nil
 		end
@@ -543,12 +569,16 @@ function PvpBattle.Start(p1: Player, p2: Player?, centre: CFrame, onEnd, opts)
 	if opts.bot then
 		s2 = { name = "Test Bot", team = {}, active = 1, centre = centre2, timeouts = 0, bot = true }
 		local folder = Workspace:FindFirstChild("Battles") or Workspace
-		for i, f in s1.team do
-			local m = f.record.model:Clone()
-			m.Name = "PvpBotPet" .. i
-			m.Parent = folder
-			local rec = { id = "bot" .. i, speciesId = f.record.speciesId, level = f.record.level, xp = 0, model = m }
-			table.insert(s2.team, fighterOf(rec))
+		-- workspace.MM_StudioBotTeam = n gives the bot n copies of the team (to test switches)
+		local copies = math.clamp(tonumber(Workspace:GetAttribute("MM_StudioBotTeam")) or 1, 1, 3)
+		for c = 1, copies do
+			for i, f in s1.team do
+				local m = f.record.model:Clone()
+				m.Name = "PvpBotPet" .. c .. "_" .. i
+				m.Parent = folder
+				local rec = { id = "bot" .. c .. "_" .. i, speciesId = f.record.speciesId, level = f.record.level, xp = 0, model = m }
+				table.insert(s2.team, fighterOf(rec))
+			end
 		end
 	else
 		s2 = sideOf(p2 :: Player, centre2)
