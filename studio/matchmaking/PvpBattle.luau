@@ -413,8 +413,15 @@ local function resolveTurn(battle)
 			return
 		end
 		side.active = nextIndex
+		-- the new pet steps in only when the clients reach this line, after the attack and the
+		-- faint have played; moving it at once showed it in the ring before the old one fell
+		local playedBefore = #raw
 		table.insert(raw, { t = "switch", side = side, name = speciesName(current(side).record) })
-		stage(battle, side)
+		task.delay(playedBefore * EVENT_SECONDS + 0.6, function()
+			if not battle.ended then
+				stage(battle, side)
+			end
+		end)
 	end
 
 	sendBoth(battle, raw, nil)

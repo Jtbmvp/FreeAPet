@@ -466,12 +466,36 @@ arenaCheck()
 -- they are fighting visible. (Wild battles never switch the foe, so they are not affected.)
 local Remotes = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Remotes"))
 local pvpFoe: Model? = nil
+local pvpToken = 0
 Remotes.Get("Battle").OnClientEvent:Connect(function(view)
 	if type(view) ~= "table" or view.kind ~= "pvp" then
 		return
 	end
 	-- after the last update (result) let the battle screen fade and restore things itself
-	pvpFoe = if view.result then nil else (view.wild and view.wild.model)
+	if view.result then
+		pvpFoe = nil
+		return
+	end
+	local model = view.wild and view.wild.model
+	if model == pvpFoe then
+		return
+	end
+	-- a new foe pet: show it only once the screen reaches its "switch" line (it waits on the
+	-- bench, out of the ring, until then)
+	local at = 0
+	for i, e in view.events or {} do
+		if e.effect == "switch" then
+			at = (i - 1) * 0.95 + 0.6
+			break
+		end
+	end
+	pvpToken += 1
+	local my = pvpToken
+	task.delay(at, function()
+		if my == pvpToken then
+			pvpFoe = model
+		end
+	end)
 end)
 local function reveal(model: Instance)
 	for _, d in model:GetDescendants() do
