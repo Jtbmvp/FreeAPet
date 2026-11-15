@@ -34,6 +34,7 @@ Estes ficheiros são a fonte dos scripts que vivem no Studio **fora** das pastas
 - O HP desce durante a batalha (os ataques tiram vida e o pet KO desmaia). No fim, o dano não fica gravado: o pet volta com a vida cheia. Os prémios ainda não estão definidos.
 - Os pets ficam assentes no chão: a altura é medida pela parte visível mais baixa (a RootPart invisível de cada pet vai até debaixo do chão).
 - No fim, cada jogador volta ao servidor de onde veio (`TeleportOptions.ServerInstanceId`, guardado na partida) e nasce na sua base (o `BaseService` do jogo faz isso a quem entra). Se esse servidor estiver cheio ou fechado, vai para outro servidor público.
+- Quando o adversário troca de pet, o novo fica visível: o ecrã de batalha do jogo (`BattleObstacles`) esconde os pets que não estavam a lutar no início e não atualiza essa lista na troca, por isso o `MatchmakingClient` mantém visível o pet que o adversário tem em campo (`LocalTransparencyModifier = 0`, só durante o PvP).
 - Teste no Studio: com `workspace.MM_StudioBotBattle = true`, o único jogador do teste luta contra um bot que copia a equipa dele.
 
 ## O que mudou nos scripts que já existiam (só no Studio)

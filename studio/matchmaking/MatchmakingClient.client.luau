@@ -460,5 +460,39 @@ end
 workspace:GetAttributeChangedSignal("MM_ArenaServer"):Connect(arenaCheck)
 arenaCheck()
 
+-- PvP: the game's battle screen (BattleObstacles) hides, for the player in the battle, every
+-- pet that was not fighting when the battle began, including the opponent's reserve pets, and
+-- does not update that list on a switch. When the opponent sends out a new pet, keep the pet
+-- they are fighting visible. (Wild battles never switch the foe, so they are not affected.)
+local Remotes = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Remotes"))
+local pvpFoe: Model? = nil
+Remotes.Get("Battle").OnClientEvent:Connect(function(view)
+	if type(view) ~= "table" or view.kind ~= "pvp" then
+		return
+	end
+	-- after the last update (result) let the battle screen fade and restore things itself
+	pvpFoe = if view.result then nil else (view.wild and view.wild.model)
+end)
+local function reveal(model: Instance)
+	for _, d in model:GetDescendants() do
+		if d:IsA("BasePart") or d:IsA("Decal") or d:IsA("Texture") then
+			if d.LocalTransparencyModifier ~= 0 then
+				d.LocalTransparencyModifier = 0
+			end
+		end
+	end
+end
+task.spawn(function()
+	while true do
+		task.wait(0.2)
+		local foe = pvpFoe
+		if foe and foe.Parent and player:GetAttribute("InBattle") == true then
+			reveal(foe)
+		elseif foe and player:GetAttribute("InBattle") ~= true then
+			pvpFoe = nil
+		end
+	end
+end)
+
 -- re-sync after a respawn or reconnect
 Action:FireServer("close")
