@@ -404,12 +404,17 @@ State.OnClientEvent:Connect(function(data)
 		pop(tostring(data.n))
 	elseif s == "arena_start" then
 		pop("FIGHT!", C.Red, 1.4)
-		local opp = data.opponent
-		showBanner("1v1 vs " .. (opp and (opp.display or opp.name) or "?"), if data.side == "red" then "You're on the red side" else "You're on the blue side", 5)
+		hideBanner() -- the game's battle screen takes over from here
 	elseif s == "arena_end" then
 		local msg
-		if data.reason == "opponent_left" then
+		if data.reason == "battle_knockout" then
+			msg = if data.won then "Victory! You won the battle!" else "Defeat... your team fainted."
+		elseif data.reason == "battle_forfeit" then
+			msg = if data.won then "Victory! Your opponent forfeited." else "You forfeited the battle."
+		elseif data.reason == "opponent_left" then
 			msg = if data.won then "Victory! Your opponent left." else "You left the match."
+		elseif data.reason == "cancelled_noteam" then
+			msg = "A player has no pets in the team. Match cancelled."
 		elseif data.reason == "cancelled_noshow" then
 			msg = "Your opponent didn't arrive. Match cancelled."
 		else

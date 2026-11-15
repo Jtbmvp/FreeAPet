@@ -25,6 +25,7 @@ local RunService = game:GetService("RunService")
 local HttpService = game:GetService("HttpService")
 
 local Config = require(ReplicatedStorage:WaitForChild("MatchmakingShared"))
+local PvpBattle = require(game:GetService("ServerScriptService"):WaitForChild("PvpBattle"))
 local remotes = ReplicatedStorage:WaitForChild("MatchmakingRemotes")
 local Action = remotes:WaitForChild("Action") :: RemoteEvent
 local State = remotes:WaitForChild("State") :: RemoteEvent
@@ -147,6 +148,21 @@ local function spawnCFrame(side: string): CFrame?
 	return CFrame.lookAt(pos, Vector3.new(other.Position.X, pos.Y, other.Position.Z)) + Vector3.new(0, 3.5, 0)
 end
 
+-- Battle centre in the colosseum, seen from the red side (-Z looks at the blue side), placed so
+-- the two pets stand either side of Markers.Center.
+local function battleCentre(): CFrame
+	local arena = workspace:FindFirstChild("MIDAS_PvPArena_Staging")
+	local markers = arena and arena:FindFirstChild("Markers")
+	local centre = markers and markers:FindFirstChild("Center") :: BasePart?
+	local red = markers and markers:FindFirstChild("Spawn_Red") :: BasePart?
+	local blue = markers and markers:FindFirstChild("Spawn_Blue") :: BasePart?
+	local c = if centre then centre.Position else Vector3.new(920, 0.5, 1900)
+	local dir = if red and blue then (blue.Position - red.Position) * Vector3.new(1, 0, 1) else Vector3.new(-1, 0, 0)
+	local layout = require(ReplicatedStorage.Shared.Config).Battle.layout
+	local mid = (layout.mine + layout.foe) / 2
+	return CFrame.lookAt(c, c + dir.Unit) * CFrame.new(-mid.X, 0, -mid.Z)
+end
+
 -- match = { id, players = { {id,name,display,side}, ... } }; present = players already here (Studio)
 local function runArena(match, inServer: boolean)
 	workspace:SetAttribute("MM_ArenaServer", true)
@@ -234,9 +250,10 @@ local function runArena(match, inServer: boolean)
 	for _, p in ipairs(Players:GetPlayers()) do
 		hook(p)
 	end
+	local battling = false
 	table.insert(connections, Players.PlayerRemoving:Connect(function(p)
-		if not expected[p.UserId] or ended then
-			return
+		if not expected[p.UserId] or ended or battling then
+			return -- during the battle PvpBattle turns a departure into a forfeit
 		end
 		if started then
 			local other = opponentOf(p.UserId)
@@ -256,24 +273,45 @@ local function runArena(match, inServer: boolean)
 		return n
 	end
 
+	-- Studio test: one real player against a bot that copies their team
+	local botTest = inServer and workspace:GetAttribute("MM_StudioBotBattle") == true
+	local need = if botTest then 1 else 2
+
 	-- wait for both players (and their characters)
 	local deadline = os.clock() + Config.ARENA_LOAD_TIMEOUT
-	while not ended and presentCount() < 2 and os.clock() < deadline do
+	while not ended and presentCount() < need and os.clock() < deadline do
 		task.wait(0.5)
 	end
 	if ended then
 		return
 	end
-	if presentCount() < 2 then
+	if presentCount() < need then
 		finish("cancelled_noshow")
 		return
+	end
+
+	-- both teams must be loaded (pets spawned next to their trainers)
+	local here = {}
+	for _, p in ipairs(Players:GetPlayers()) do
+		if expected[p.UserId] then
+			table.insert(here, p)
+		end
+	end
+	for _, p in ipairs(here) do
+		if not PvpBattle.WaitForTeam(p, Config.ARENA_TEAM_TIMEOUT) then
+			if ended then
+				return
+			end
+			finish("cancelled_noteam")
+			return
+		end
 	end
 
 	task.wait(Config.ARENA_SETTLE)
 	if ended then
 		return
 	end
-	if presentCount() < 2 then
+	if presentCount() < need then
 		finish("cancelled_left")
 		return
 	end
@@ -289,37 +327,56 @@ local function runArena(match, inServer: boolean)
 			return
 		end
 	end
-	if presentCount() < 2 then
+	if presentCount() < need then
 		finish("cancelled_left")
 		return
 	end
 
-	started = true
-	for _, p in ipairs(Players:GetPlayers()) do
-		if expected[p.UserId] then
-			if p.Character then
-				freeze(p.Character, false)
-			end
-			send(p, { state = "arena_start", opponent = opponentOf(p.UserId), side = expected[p.UserId].side })
+	-- battle: the red player is side 1, the blue player side 2
+	local red, blue
+	for _, p in ipairs(here) do
+		if expected[p.UserId].side == "red" then
+			red = p
+		else
+			blue = p
 		end
 	end
-	log("match started", match.id)
-
-	-- the colosseum's return portal sends players back to a lobby server
-	table.insert(connections, (ReturnToLobby :: BindableEvent).Event:Connect(function(p: Player)
-		if expected[p.UserId] and not ended then
-			local other = opponentOf(p.UserId)
-			finish("opponent_left", other and other.id)
-		elseif not expected[p.UserId] then
-			returnToLobby(p)
+	if botTest then
+		red = red or blue
+		blue = nil
+	end
+	started = true
+	battling = true
+	for _, p in ipairs(here) do
+		if p.Character then
+			freeze(p.Character, false)
 		end
-	end))
+		send(p, { state = "arena_start", opponent = opponentOf(p.UserId), side = expected[p.UserId].side })
+	end
+	local ok, why = PvpBattle.Start(red, blue, battleCentre(), function(winner: Player?, _loser: Player?, reason: string)
+		battling = false
+		finish("battle_" .. reason, winner and winner.UserId)
+	end, { bot = botTest })
+	if not ok then
+		battling = false
+		warn("[Matchmaking] battle could not start: " .. tostring(why))
+		finish("cancelled_noteam")
+		return
+	end
+	log("battle started", match.id)
 end
 
 -- Reserved servers are only created by this matchmaking (the game has no other ReserveServer).
 local isReserved = game.PrivateServerId ~= "" and game.PrivateServerOwnerId == 0
 if isReserved then
 	workspace:SetAttribute("MM_ArenaServer", true) -- hide the HUD button straight away
+	-- the colosseum return portal (ArenaLinkServer) sends players to a public lobby server
+	local returnEvent = ReturnToLobby :: BindableEvent
+	returnEvent.Event:Connect(function(p: Player)
+		if not PvpBattle.IsBattling(p) then
+			returnToLobby(p)
+		end
+	end)
 	Action.OnServerEvent:Connect(function(player, action)
 		if action == "open" then
 			send(player, { state = "arena_busy" })
@@ -772,6 +829,10 @@ local function createRoom(p: Player)
 	if s.roomId or s.teleporting then
 		return
 	end
+	if not PvpBattle.HasTeam(p) then
+		send(p, { state = "error", text = "Add a pet to your team first (Pets > Equip)." })
+		return
+	end
 	local roomId = string.format("%012d_%d", now(), p.UserId)
 	local okLock, err = acquireLock(p, roomId)
 	if not okLock then
@@ -809,6 +870,10 @@ end
 local function joinRoom(p: Player, roomId: any)
 	local s = session(p)
 	if s.roomId or s.teleporting or type(roomId) ~= "string" or #roomId > 64 then
+		return
+	end
+	if not PvpBattle.HasTeam(p) then
+		send(p, { state = "error", text = "Add a pet to your team first (Pets > Equip)." })
 		return
 	end
 	local okLock, err = acquireLock(p, roomId)

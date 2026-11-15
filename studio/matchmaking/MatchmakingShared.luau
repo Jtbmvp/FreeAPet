@@ -19,6 +19,7 @@ return {
 	ARENA_LOAD_TIMEOUT = 45, -- seconds the arena waits for both players
 	ARENA_SETTLE = 3, -- seconds after both loaded before the countdown
 	ARENA_COUNTDOWN = 3,
+	ARENA_TEAM_TIMEOUT = 25, -- seconds the arena waits for each team (pets) to load
 	ARENA_RETURN_DELAY = 6, -- seconds before sending a player back to the lobby
 
 	MAX_ROOMS_SHOWN = 30,
