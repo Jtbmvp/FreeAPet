@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="pt">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FreeAPet · Biblioteca de Pets</title>
+<link rel="stylesheet" href="styles.css">
+<script type="importmap">
+{ "imports": {
+  "three": "./vendor/three/build/three.module.min.js",
+  "three/addons/": "./vendor/three/examples/jsm/"
+} }
+</script>
+</head>
+<body>
+<div class="app">
+
+  <aside class="library" aria-label="Biblioteca">
+    <header class="brand">
+      <div class="brand-mark" aria-hidden="true"><span></span></div>
+      <div>
+        <div class="brand-name">Free a Pet</div>
+        <div class="brand-sub">Biblioteca de pets</div>
+      </div>
+    </header>
+    <label class="search">
+      <svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="9" cy="9" r="5.5"/><path d="m13.5 13.5 4 4"/></svg>
+      <input id="search" type="search" placeholder="Procurar pet" autocomplete="off">
+    </label>
+    <div id="filters" class="filters"></div>
+    <div class="library-head"><span>Pets</span><span id="pet-count" class="count">0</span></div>
+    <div id="pet-list" class="pet-list" role="list"></div>
+    <footer class="library-foot">Atualiza sozinho quando um pet novo é exportado</footer>
+  </aside>
+
+  <main class="stage">
+    <div class="stage-top">
+      <div class="title-block">
+        <h1 id="pet-name">—</h1>
+        <div id="pet-tags" class="tags"></div>
+      </div>
+      <div class="tools" role="toolbar" aria-label="Vista">
+        <button class="tool is-on" data-toggle="rotate" title="Rodar automaticamente (R)">Rodar</button>
+        <button class="tool" data-toggle="skeleton" title="Mostrar esqueleto (S)">Esqueleto</button>
+        <button class="tool is-on" data-toggle="grid" title="Mostrar chão (G)">Chão</button>
+        <button class="tool" data-toggle="wire" title="Malha em arame (W)">Arame</button>
+        <button class="tool" data-action="reset" title="Repor câmara (C)">Repor câmara</button>
+      </div>
+    </div>
+
+    <div class="viewport" id="viewport">
+      <canvas id="canvas"></canvas>
+      <div id="cue" class="cue" aria-live="polite"></div>
+      <div id="loader" class="loader">
+        <div class="loader-ring"></div>
+        <div id="loader-text" class="loader-text">A carregar…</div>
+        <div class="loader-bar"><i id="loader-fill"></i></div>
+      </div>
+      <div class="hint">Arrastar para rodar · roda do rato para aproximar · botão direito para mover</div>
+    </div>
+
+    <div class="transport">
+      <button id="play" class="play" title="Reproduzir / pausar (Espaço)" aria-label="Reproduzir ou pausar">
+        <svg class="ico-pause" viewBox="0 0 20 20"><rect x="5" y="4" width="3.5" height="12" rx="1"/><rect x="11.5" y="4" width="3.5" height="12" rx="1"/></svg>
+        <svg class="ico-play" viewBox="0 0 20 20"><path d="M6 4.2v11.6a.8.8 0 0 0 1.2.7l9.5-5.8a.8.8 0 0 0 0-1.4L7.200 3.500A.8.8 0 0 0 6 4.200Z"/></svg>
+      </button>
+      <button id="restart" class="ghost" title="Recomeçar (Enter)">Recomeçar</button>
+      <div class="timeline">
+        <div class="timeline-head">
+          <span id="clip-name" class="clip-name">—</span>
+          <span id="clip-time" class="clip-time">0.00 / 0.00 s · f0</span>
+        </div>
+        <div class="track" id="track">
+          <div class="track-fill" id="track-fill"></div>
+          <div class="track-markers" id="track-markers"></div>
+          <input id="scrub" type="range" min="0" max="1000" value="0" aria-label="Linha do tempo">
+        </div>
+      </div>
+      <div class="speed" role="group" aria-label="Velocidade">
+        <button data-speed="0.25">¼×</button>
+        <button data-speed="0.5">½×</button>
+        <button data-speed="1" class="is-on">1×</button>
+        <button data-speed="2">2×</button>
+      </div>
+    </div>
+  </main>
+
+  <aside class="panel" aria-label="Animações">
+    <section>
+      <div class="panel-head"><h2>Animações</h2><span id="clip-count" class="count">0</span></div>
+      <div id="clip-list" class="clip-list"></div>
+      <label class="check"><input id="auto-idle" type="checkbox" checked><span>Voltar ao Idle depois de um ataque</span></label>
+    </section>
+    <section>
+      <div class="panel-head"><h2>Clip</h2></div>
+      <div id="clip-info" class="info"></div>
+    </section>
+    <section>
+      <div class="panel-head"><h2>Modelo</h2></div>
+      <dl id="model-info" class="stats"></dl>
+    </section>
+    <section class="keys">
+      <div class="panel-head"><h2>Atalhos</h2></div>
+      <p><kbd>Espaço</kbd> pausa · <kbd>←</kbd><kbd>→</kbd> frame a frame · <kbd>1</kbd>–<kbd>9</kbd> clips · <kbd>Enter</kbd> recomeçar</p>
+    </section>
+  </aside>
+
+</div>
+<script type="module" src="app.js"></script>
+</body>
+</html>

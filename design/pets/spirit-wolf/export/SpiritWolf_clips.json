@@ -1,0 +1,148 @@
+{
+ "name": "SpiritWolf",
+ "displayName": "Spirit Wolf",
+ "fps": 30,
+ "source": "SpiritWolf_meshy_rigged.glb",
+ "facing": "-Z in glTF (-Y in Blender)",
+ "bones": {
+  "root": "Bone_000",
+  "pelvis": "Bone_001",
+  "spine": "Bone_013",
+  "chest": "Bone_012",
+  "head": "Bone_027",
+  "muzzle": "Bone_025",
+  "nose": "Bone_024",
+  "antler_L": "Bone_023",
+  "antler_L_tip": "Bone_022",
+  "antler_R": "Bone_021",
+  "antler_R_tip": "Bone_020",
+  "tail1": "Bone_017",
+  "tail2": "Bone_016",
+  "tail3": "Bone_015",
+  "tail4": "Bone_014"
+ },
+ "legs": {
+  "FL": [
+   [
+    "Bone_047",
+    "Bone_046",
+    "Bone_045",
+    "Bone_044",
+    "Bone_043"
+   ],
+   [
+    "Bone_037",
+    "Bone_036",
+    "Bone_035",
+    "Bone_034",
+    "Bone_033"
+   ]
+  ],
+  "FR": [
+   [
+    "Bone_042",
+    "Bone_041",
+    "Bone_040",
+    "Bone_039",
+    "Bone_038"
+   ],
+   [
+    "Bone_032",
+    "Bone_031",
+    "Bone_030",
+    "Bone_029",
+    "Bone_028"
+   ]
+  ],
+  "HL": [
+   [
+    "Bone_011",
+    "Bone_010",
+    "Bone_009",
+    "Bone_008",
+    "Bone_007"
+   ]
+  ],
+  "HR": [
+   [
+    "Bone_006",
+    "Bone_005",
+    "Bone_004",
+    "Bone_003",
+    "Bone_002"
+   ]
+  ]
+ },
+ "clips": {
+  "Idle": {
+   "duration": 4.0,
+   "frames": 121,
+   "loop": true,
+   "markers": {},
+   "family": null,
+   "note": "Respira, olha em volta e abana a cauda devagar. Patas sempre plantadas.",
+   "min_z": -0.011
+  },
+  "Walk": {
+   "duration": 1.0,
+   "frames": 31,
+   "loop": true,
+   "markers": {
+    "step_HL": 0.0,
+    "step_FL": 0.22,
+    "step_HR": 0.5,
+    "step_FR": 0.72
+   },
+   "family": null,
+   "note": "Passo a quatro tempos, no lugar (sem deslocar a raiz). Marcadores step_* para sons de passos.",
+   "min_z": -0.003
+  },
+  "Attack_SpiritPounce": {
+   "duration": 1.6,
+   "frames": 49,
+   "loop": false,
+   "markers": {
+    "release": 0.42,
+    "impact": 0.64
+   },
+   "family": "slash",
+   "note": "Encolhe-se, salta e rasga com as duas patas dianteiras antes de morder. VFX: rastos de garras violeta nas patas, estilha\u00e7os de cristal na aterragem (impact).",
+   "min_z": -0.0
+  },
+  "Attack_CrystalHowl": {
+   "duration": 2.4,
+   "frames": 73,
+   "loop": false,
+   "markers": {
+    "release": 0.86,
+    "impact": 1.0
+   },
+   "family": "pulse",
+   "note": "Baixa a cabe\u00e7a para carregar os cristais das hastes e solta um uivo. VFX: brilho crescente nas hastes durante a carga, onda de choque radial no release/impact.",
+   "min_z": -0.0
+  },
+  "Attack_RuneSlam": {
+   "duration": 1.9,
+   "frames": 58,
+   "loop": false,
+   "markers": {
+    "release": 0.62,
+    "impact": 0.74
+   },
+   "family": "geyser",
+   "note": "Empina-se e esmaga o ch\u00e3o com as patas e as hastes. VFX: a runa do ombro acende no topo (release), espig\u00f5es de cristal irrompem \u00e0 frente no impact.",
+   "min_z": -0.0
+  },
+  "Fainted": {
+   "duration": 2.6,
+   "frames": 79,
+   "loop": false,
+   "markers": {
+    "ground": 1.46
+   },
+   "family": null,
+   "note": "Recua com o golpe, cambaleia e cai de barriga; fica na pose final (n\u00e3o faz loop).",
+   "min_z": -0.0
+  }
+ }
+}

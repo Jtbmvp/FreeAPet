@@ -1,0 +1,10 @@
+{
+  "id": "spirit-wolf",
+  "name": "Spirit Wolf",
+  "file": "SpiritWolf",
+  "source": "SpiritWolf_meshy_rigged.glb",
+  "rarity": "Legendary",
+  "biome": "Forest",
+  "tags": ["Espírito", "Cristal"],
+  "frame": 2.7
+}

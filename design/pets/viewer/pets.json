@@ -1,0 +1,42 @@
+{
+  "rarities": [
+    "Common",
+    "Uncommon",
+    "Rare",
+    "Epic",
+    "Legendary",
+    "Mythic"
+  ],
+  "pets": [
+    {
+      "id": "moon-kitsune",
+      "name": "Moon Kitsune",
+      "rarity": "Mythic",
+      "biome": "Forest",
+      "tags": [
+        "Lua",
+        "Raposa",
+        "6 animações"
+      ],
+      "model": "../moon-kitsune/export/MoonKitsune.glb",
+      "clips": "../moon-kitsune/export/MoonKitsune_clips.json",
+      "thumb": "thumbs/moon-kitsune.png",
+      "version": 1794855902
+    },
+    {
+      "id": "spirit-wolf",
+      "name": "Spirit Wolf",
+      "rarity": "Legendary",
+      "biome": "Forest",
+      "tags": [
+        "Espírito",
+        "Cristal",
+        "6 animações"
+      ],
+      "model": "../spirit-wolf/export/SpiritWolf.glb",
+      "clips": "../spirit-wolf/export/SpiritWolf_clips.json",
+      "thumb": "thumbs/spirit-wolf.png",
+      "version": 1794854647
+    }
+  ]
+}

@@ -20,3 +20,9 @@ __pycache__/
 
 # Local upstream checkout; pinned revision and hashes live in docs/agent-workflow
 /tools/roclicks-skills/
+
+# Pet model binaries (large, private assets): kept local, never in the public repo.
+# Rebuild the exports with design/pets/<pet>/scripts/build.py
+design/pets/*/source/
+design/pets/*/export/*.glb
+design/pets/*/export/*.fbx

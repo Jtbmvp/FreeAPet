@@ -1,0 +1,10 @@
+{
+  "id": "moon-kitsune",
+  "name": "Moon Kitsune",
+  "file": "MoonKitsune",
+  "source": "MoonKitsune_meshy_rigged.glb",
+  "rarity": "Mythic",
+  "biome": "Forest",
+  "tags": ["Lua", "Raposa"],
+  "frame": 2.6
+}

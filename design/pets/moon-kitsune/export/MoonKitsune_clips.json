@@ -1,0 +1,141 @@
+{
+ "name": "MoonKitsune",
+ "displayName": "Moon Kitsune",
+ "fps": 30,
+ "source": "MoonKitsune_meshy_rigged.glb",
+ "bones": {
+  "root": "Bone_000",
+  "pelvis": "Bone_001",
+  "spine1": "Bone_004",
+  "spine2": "Bone_003",
+  "spine3": "Bone_002",
+  "chest": "Bone_021",
+  "neck1": "Bone_020",
+  "neck2": "Bone_026",
+  "head": "Bone_025",
+  "crown": "Bone_024",
+  "ear_L": "Bone_040",
+  "ear_L_tip": "Bone_039",
+  "ear_R": "Bone_042",
+  "ear_R_tip": "Bone_041",
+  "tailbase": "Bone_023",
+  "tailhub": "Bone_022",
+  "tA0": "Bone_019",
+  "tA1": "Bone_018",
+  "tA2": "Bone_017",
+  "tB0": "Bone_014",
+  "tB1": "Bone_013",
+  "tC0": "Bone_016",
+  "tC1": "Bone_015",
+  "tD0": "Bone_038",
+  "tD1": "Bone_037",
+  "tE0": "Bone_036",
+  "tE1": "Bone_035",
+  "tF0": "Bone_034",
+  "tF1": "Bone_033",
+  "tG0": "Bone_010",
+  "tG1": "Bone_009",
+  "tH0": "Bone_012",
+  "tH1": "Bone_011"
+ },
+ "legs": {
+  "FL": [
+   [
+    "Bone_032",
+    "Bone_031",
+    "Bone_030"
+   ]
+  ],
+  "FR": [
+   [
+    "Bone_029",
+    "Bone_028",
+    "Bone_027"
+   ]
+  ],
+  "HL": [
+   [
+    "Bone_006",
+    "Bone_005"
+   ]
+  ],
+  "HR": [
+   [
+    "Bone_008",
+    "Bone_007"
+   ]
+  ]
+ },
+ "clips": {
+  "Idle": {
+   "duration": 4.0,
+   "frames": 121,
+   "loop": true,
+   "markers": {},
+   "family": null,
+   "note": "Respira, mexe as orelhas e ondula as oito caudas, cada uma com o seu atraso.",
+   "min_z": -0.002
+  },
+  "Walk": {
+   "duration": 0.9,
+   "frames": 28,
+   "loop": true,
+   "markers": {
+    "step_HL": 0.0,
+    "step_FL": 0.22,
+    "step_HR": 0.45,
+    "step_FR": 0.67
+   },
+   "family": null,
+   "note": "Passo leve a quatro tempos, no lugar. Marcadores step_* para sons de passos.",
+   "min_z": -0.008
+  },
+  "Attack_FoxfireVolley": {
+   "duration": 1.8,
+   "frames": 55,
+   "loop": false,
+   "markers": {
+    "release": 0.74,
+    "impact": 0.95
+   },
+   "family": "projectile",
+   "note": "Abre as caudas em leque a carregar e chicoteia-as para a frente. VFX: uma chama de raposa na ponta de cada cauda durante a carga, disparadas no release.",
+   "min_z": -0.004
+  },
+  "Attack_LunarCrescent": {
+   "duration": 1.6,
+   "frames": 49,
+   "loop": false,
+   "markers": {
+    "release": 0.38,
+    "impact": 0.82
+   },
+   "family": "slash",
+   "note": "Encolhe-se, salta e d\u00e1 uma volta completa no ar com as caudas a arrastar. VFX: arco de lua crescente a seguir as caudas, corte no impact (aterragem).",
+   "min_z": -0.009
+  },
+  "Attack_EclipseNova": {
+   "duration": 2.2,
+   "frames": 67,
+   "loop": false,
+   "markers": {
+    "release": 0.85,
+    "impact": 0.98
+   },
+   "family": "radial",
+   "note": "Olha para a lua e abre as caudas num disco; ergue as patas e esmaga o ch\u00e3o. VFX: disco lunar atr\u00e1s das caudas durante a carga, nova radial no impact.",
+   "min_z": -0.017
+  },
+  "Fainted": {
+   "duration": 2.5,
+   "frames": 76,
+   "loop": false,
+   "markers": {
+    "ground": 1.46
+   },
+   "family": null,
+   "note": "Recua com o golpe, cambaleia e deita-se com as caudas ca\u00eddas; fica na pose final.",
+   "min_z": -0.008
+  }
+ }
+}
