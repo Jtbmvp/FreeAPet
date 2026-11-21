@@ -1,7 +1,9 @@
 -- BiomeTeleportServer (ServerScriptService): teleports a player to a biome's arrival point.
 -- Points: Workspace.Map.TeleportPoints.TP_<Biome> (invisible, anchored, no collision).
 -- Remote: ReplicatedStorage.BiomeTeleportRemotes.Teleport (RemoteEvent)
---   client -> server: ("go", biomeName)
+--   client -> server: ("go", biomeName)   biomeName "Base" = the player's own base plot
+--     (Workspace.Map.Bases.Base_<N> whose PlotIndex/BaseIndex matches the player's PlotIndex
+--      attribute set by BaseService; read only, BaseService is not touched)
 --   server -> client: ("result", ok: boolean, message: string, biomeName: string?)
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -16,7 +18,7 @@ local BIOMES = {
 	Ice = "TP_Ice",
 	Kingdom = "TP_Kingdom",
 }
-local LABEL = { Lobby = "Lobby", Forest = "Forest", Desert = "Desert", Ice = "Ice", Kingdom = "Forgotten Kingdom" }
+local LABEL = { Lobby = "Lobby", Forest = "Forest", Desert = "Desert", Ice = "Ice", Kingdom = "Forgotten Kingdom", Base = "your base" }
 
 local folder = ReplicatedStorage:FindFirstChild("BiomeTeleportRemotes")
 if not folder then
@@ -63,6 +65,43 @@ local function point(name: string): BasePart?
 	return if p and p:IsA("BasePart") then p else nil
 end
 
+-- The player's own base: the plot BaseService gave them (PlotIndex attribute), its Spawn marker.
+local function plotIndexOf(plot: Instance): number?
+	for _, name in { "PlotIndex", "BaseIndex" } do
+		local v = plot:GetAttribute(name)
+		if typeof(v) == "number" then
+			return v
+		end
+	end
+	return nil
+end
+local function baseTarget(player: Player): CFrame?
+	local index = player:GetAttribute("PlotIndex")
+	local map = workspace:FindFirstChild("Map")
+	local bases = map and map:FindFirstChild("Bases")
+	if typeof(index) ~= "number" or not bases then
+		return nil
+	end
+	for _, plot in bases:GetChildren() do
+		if plot:IsA("Model") and plotIndexOf(plot) == index then
+			local owner = plot:GetAttribute("OwnerUserId")
+			if owner ~= nil and owner ~= player.UserId then
+				return nil -- never send anyone into another player's base
+			end
+			local spawn = plot:FindFirstChild("Spawn")
+			if spawn and spawn:IsA("BasePart") then
+				return spawn.CFrame * CFrame.new(0, 4, 0) -- same as BaseService's own spawn
+			end
+			local zone = plot:FindFirstChild("SafeZone")
+			if zone and zone:IsA("BasePart") then
+				return CFrame.new(zone.Position.X, zone.Position.Y - zone.Size.Y / 2 + 4, zone.Position.Z)
+			end
+			return nil
+		end
+	end
+	return nil
+end
+
 local last: { [Player]: number } = {}
 
 local function reply(player: Player, ok: boolean, msg: string, biome: string?)
@@ -70,7 +109,7 @@ local function reply(player: Player, ok: boolean, msg: string, biome: string?)
 end
 
 Teleport.OnServerEvent:Connect(function(player: Player, action: any, biome: any)
-	if action ~= "go" or type(biome) ~= "string" or BIOMES[biome] == nil then
+	if action ~= "go" or type(biome) ~= "string" or (BIOMES[biome] == nil and biome ~= "Base") then
 		return
 	end
 	local now = os.clock()
@@ -94,23 +133,34 @@ Teleport.OnServerEvent:Connect(function(player: Player, action: any, biome: any)
 		reply(player, false, "You need to be alive to teleport", biome)
 		return
 	end
-	local target = point(BIOMES[biome])
-	if not target then
-		reply(player, false, "That biome is not ready yet", biome)
-		return
+	local targetCf: CFrame
+	if biome == "Base" then
+		local cf = baseTarget(player)
+		if not cf then
+			reply(player, false, "You don't have a base yet", biome)
+			return
+		end
+		targetCf = cf
+	else
+		local target = point(BIOMES[biome])
+		if not target then
+			reply(player, false, "That biome is not ready yet", biome)
+			return
+		end
+		targetCf = target.CFrame + LIFT
 	end
 	last[player] = now
 	if hum.Sit then
 		hum.Sit = false
 	end
-	char:PivotTo(target.CFrame + LIFT)
+	char:PivotTo(targetCf)
 	for _, d in char:GetDescendants() do
 		if d:IsA("BasePart") then
 			d.AssemblyLinearVelocity = Vector3.zero
 			d.AssemblyAngularVelocity = Vector3.zero
 		end
 	end
-	reply(player, true, "Welcome to " .. LABEL[biome] .. "!", biome)
+	reply(player, true, if biome == "Base" then "Welcome home!" else "Welcome to " .. LABEL[biome] .. "!", biome)
 end)
 
 Players.PlayerRemoving:Connect(function(p)
