@@ -7,6 +7,7 @@ Kept here because these instances live in the place file, outside the synced `Se
 |---|---|
 | `BiomeTeleportServer.server.luau` | `ServerScriptService.BiomeTeleportServer` (Script) |
 | `BiomeTeleportClient.client.luau` | `StarterGui.BiomeTeleportGui.BiomeTeleportClient` (LocalScript, ScreenGui ResetOnSpawn = false) |
+| `TravelPortalClient.client.luau` | `StarterPlayer.StarterPlayerScripts.TravelPortalClient` (LocalScript) |
 
 Other instances it uses:
 
@@ -29,3 +30,25 @@ size (the HUD pins its buttons on wide screens). If no Base plate shows up withi
 Travel button appears at the top centre. The panel has 6 cards (🏠 My Base, ⛲ Lobby, 🌲 Forest, 🏜️ Desert,
 ❄️ Ice, 🏰 Forgotten Kingdom), marks "YOU ARE HERE" from the player's `Zone` attribute and hides on the arena
 server.
+
+## Travel portal animation (2026-11-22)
+
+`StarterPlayerScripts.TravelPortalClient` (`TravelPortalClient.client.luau`, LocalScript) plays a cinematic for
+every accepted trip (about 4 s); the portal model is described in `studio/portal/README.md`.
+
+1. Server accepts `("go", biome)` (same checks as before; repeated clicks while a trip is pending are ignored)
+   and sends `("start", biome)` to the player and `("fx", "depart", player, cframe, biome)` to everyone.
+2. Client: a tinted flash, the HUD ScreenGuis are hidden, the character is moved to a private stage under
+   the map (`6000 + (UserId % 16) * 400, -440, 0`; night void, stars, a nebula, the haze thinned locally)
+   where the portal opens in the destination colour. Scripted camera; the character (root anchored, its
+   own run/jump animations) runs and leaps into the vortex, which speeds up, white flash, `("enter")`.
+3. Tunnel screen: rings and speed lines in the biome colour, "TRAVELLING TO", the emoji and the name
+   (Montserrat Heavy, dark outline).
+4. Server does the real move to `TP_*` / the base spawn when `enter` arrives (or after 5 s anyway) and sends
+   `("fx", "arrive", ...)`. Client: a small portal opens behind the character, it walks out, the camera
+   eases back, controls and HUD return, the portal closes. Others only see the small portals on the spot.
+
+Safety: controls are frozen with a high-priority ContextActionService sink (the place has no PlayerModule);
+everything is undone after 8 s, on death or respawn; a character left on the stage is moved back.
+QA only: the player attribute `TravelPortalHold` = `stage` / `tunnel` / `arrive` pauses the trip at that
+moment for screenshots.

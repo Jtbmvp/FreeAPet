@@ -150,6 +150,9 @@ for i, b in ipairs(BIOMES) do
 	f.BackgroundColor3 = C.Row
 	cards[b.id] = { frame = f, go = go, here = here, badge = badge, name = name }
 	go.MouseButton1Click:Connect(function()
+		if player:GetAttribute("TravelPortalActive") then
+			return -- a trip is already playing (TravelPortalClient)
+		end
 		status.Text = "Teleporting to " .. b.name .. "..."
 		status.TextColor3 = C.Muted
 		Teleport:FireServer("go", b.id)
@@ -212,6 +215,10 @@ hudButton.MouseButton1Click:Connect(togglePanel)
 close.MouseButton1Click:Connect(closePanel)
 
 Teleport.OnClientEvent:Connect(function(kind, ok, msg)
+	if kind == "start" then
+		closePanel() -- the portal animation takes over (StarterPlayerScripts.TravelPortalClient)
+		return
+	end
 	if kind ~= "result" then
 		return
 	end
