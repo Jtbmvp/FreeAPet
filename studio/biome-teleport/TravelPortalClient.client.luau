@@ -4,7 +4,8 @@
 --   1. a quick flash, and the character is moved to a hidden stage under the map (night void with stars)
 --      where a portal (ReplicatedStorage.TravelPortal, modelled in Blender) opens in the destination colour;
 --   2. cinematic camera: the character runs and leaps into the vortex, the vortex speeds up, white flash;
---   3. tunnel screen (rings and speed lines in the biome colour, big emoji + destination name);
+--   3. fall tunnel: a client-only copy of the character tumbles down a spiral tunnel in the destination
+--      colour (rings, speed lines, sparks; camera below it), built next to the hidden stage;
 --      meanwhile we send ("enter") and the server does the real move to TP_* / the base spawn;
 --   4. on ("fx", "arrive") a small portal opens behind the character at the destination, the character
 --      walks out, the camera eases back to normal, the controls come back and the portal closes.
@@ -21,9 +22,6 @@ local TEMPLATE = ReplicatedStorage:WaitForChild("TravelPortal") :: Model
 
 local SAFETY = 8
 local CENTER = Vector3.new(0, TEMPLATE:GetAttribute("PortalCenterY") or 9.6, 0)
-local FONT_TITLE = Font.fromName("Montserrat", Enum.FontWeight.Heavy)
-local FONT_SUB = Font.fromName("Montserrat", Enum.FontWeight.Bold)
-local OUTLINE = Color3.fromRGB(26, 22, 44)
 
 local BIOMES = {
 	Base = { name = "My Base", emoji = "🏠", color = Color3.fromRGB(64, 224, 200) },
@@ -293,7 +291,7 @@ local function buildStage(o: CFrame, color: Color3): Folder
 end
 
 --------------------------------------------------------------------------------------------
--- Screen: flash + tunnel (rings and speed lines) + destination title
+-- Screen: the white flash between phases
 --------------------------------------------------------------------------------------------
 local gui = Instance.new("ScreenGui")
 gui.Name = "TravelPortalScreen"
@@ -304,71 +302,6 @@ gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 gui.Enabled = false
 gui.Parent = player:WaitForChild("PlayerGui")
 
-local tunnel = Instance.new("CanvasGroup")
-tunnel.Name = "Tunnel"
-tunnel.Size = UDim2.fromScale(1, 1)
-tunnel.BorderSizePixel = 0
-tunnel.GroupTransparency = 1
-tunnel.Parent = gui
-tunnel.BackgroundTransparency = 1
--- the gradient sits on its own frame: a UIGradient on the CanvasGroup itself would tint everything in it
-local tunnelBg = Instance.new("Frame")
-tunnelBg.Size = UDim2.fromScale(1, 1)
-tunnelBg.BorderSizePixel = 0
-tunnelBg.BackgroundColor3 = Color3.new(1, 1, 1)
-tunnelBg.ZIndex = 0
-tunnelBg.Parent = tunnel
-local tunnelGrad = Instance.new("UIGradient")
-tunnelGrad.Rotation = 90
-tunnelGrad.Parent = tunnelBg
-local fxLayer = Instance.new("Frame")
-fxLayer.Size = UDim2.fromScale(1, 1)
-fxLayer.BackgroundTransparency = 1
-fxLayer.ClipsDescendants = true
-fxLayer.Parent = tunnel
-local core = Instance.new("Frame")
-core.AnchorPoint = Vector2.new(0.5, 0.5)
-core.Position = UDim2.fromScale(0.5, 0.5)
-core.Size = UDim2.fromScale(0.16, 0.16)
-core.BackgroundColor3 = Color3.new(1, 1, 1)
-core.BackgroundTransparency = 0.55
-core.ZIndex = 2
-core.Parent = tunnel
-Instance.new("UIAspectRatioConstraint").Parent = core
-local coreCorner = Instance.new("UICorner")
-coreCorner.CornerRadius = UDim.new(1, 0)
-coreCorner.Parent = core
-
-local card = Instance.new("Frame")
-card.AnchorPoint = Vector2.new(0.5, 0.5)
-card.Position = UDim2.fromScale(0.5, 0.5)
-card.Size = UDim2.fromOffset(900, 280)
-card.BackgroundTransparency = 1
-card.ZIndex = 5
-card.Parent = tunnel
-local cardScale = Instance.new("UIScale")
-cardScale.Parent = card
-local function label(text: string, font: Font, y: number, h: number, stroke: number): TextLabel
-	local l = Instance.new("TextLabel")
-	l.BackgroundTransparency = 1
-	l.Size = UDim2.new(1, 0, 0, h)
-	l.Position = UDim2.fromOffset(0, y)
-	l.FontFace = font
-	l.Text = text
-	l.TextScaled = true
-	l.TextColor3 = Color3.new(1, 1, 1)
-	l.ZIndex = 6
-	l.Parent = card
-	local s = Instance.new("UIStroke")
-	s.Thickness = stroke
-	s.Color = OUTLINE
-	s.Parent = l
-	return l
-end
-local subLabel = label("TRAVELLING TO", FONT_SUB, 0, 30, 3)
-local emojiLabel = label("", FONT_TITLE, 34, 120, 0)
-local nameLabel = label("", FONT_TITLE, 160, 110, 6)
-
 local flash = Instance.new("Frame")
 flash.Name = "Flash"
 flash.Size = UDim2.fromScale(1, 1)
@@ -378,105 +311,219 @@ flash.BackgroundTransparency = 1
 flash.ZIndex = 10
 flash.Parent = gui
 
-local function fitCard()
-	local h = gui.AbsoluteSize.Y
-	cardScale.Scale = math.clamp(h / 900, 0.45, 1.1)
-end
-gui:GetPropertyChangedSignal("AbsoluteSize"):Connect(fitCard)
+--------------------------------------------------------------------------------------------
+-- Fall tunnel: a client-only copy of the character falls down a spiral tunnel in the
+-- destination colour (built next to the hidden stage), while the server moves the real one.
+-- The copy stays put and the tunnel rushes upward past it: rings, speed lines, sparks.
+--------------------------------------------------------------------------------------------
+local RING_N, RING_SEG, RING_R, RING_GAP, RING_SPEED = 16, 10, 13, 7, 62
+local LINE_N, LINE_SPEED = 30, 150
+local TUBE_TOP, TUBE_LEN = 44, 16 * 7
 
-local tunnelConn: RBXScriptConnection? = nil
-local function startTunnel(color: Color3, info)
-	tunnelGrad.Color = ColorSequence.new({
-		ColorSequenceKeypoint.new(0, darker(color, 0.55)),
-		ColorSequenceKeypoint.new(0.5, darker(color, 0.25)),
-		ColorSequenceKeypoint.new(1, darker(color, 0.6)),
+local function fallCopy(char: Model, at: CFrame, parent: Instance): (Model?, Humanoid?)
+	local was = char.Archivable
+	char.Archivable = true
+	local ok, copy = pcall(char.Clone, char)
+	char.Archivable = was
+	if not (ok and copy) then
+		return nil, nil
+	end
+	for _, d in copy:GetDescendants() do
+		if d:IsA("LuaSourceContainer") or d:IsA("Sound") or d:IsA("ForceField") then
+			d:Destroy()
+		elseif d:IsA("BasePart") then
+			d.CanCollide = false
+			d.CanQuery = false
+			d.CanTouch = false
+			d.Massless = true
+			d.Anchored = false
+		end
+	end
+	local hum = copy:FindFirstChildOfClass("Humanoid")
+	local root = copy:FindFirstChild("HumanoidRootPart") :: BasePart?
+	if not (hum and root) then
+		copy:Destroy()
+		return nil, nil
+	end
+	hum.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None
+	hum.HealthDisplayType = Enum.HumanoidHealthDisplayType.AlwaysOff
+	hum.EvaluateStateMachine = false
+	hum.PlatformStand = true
+	root.Anchored = true
+	copy.Name = "TravelFallCopy"
+	copy:PivotTo(at)
+	copy.Parent = parent
+	if not hum:FindFirstChildOfClass("Animator") then
+		Instance.new("Animator").Parent = hum
+	end
+	return copy, hum
+end
+
+local fallConn: RBXScriptConnection? = nil
+local fallFolder: Folder? = nil
+local function stopTunnel()
+	if fallConn then
+		fallConn:Disconnect()
+		fallConn = nil
+	end
+	if fallFolder then
+		fallFolder:Destroy()
+		fallFolder = nil
+	end
+end
+
+-- o: stage origin; the tunnel axis sits 320 studs to the side of the stage (same private slot)
+local function startTunnel(color: Color3, char: Model, o: CFrame)
+	stopTunnel()
+	local axis = o * CFrame.new(0, 0, 320)
+	local f = Instance.new("Folder")
+	f.Name = "TravelFallTunnel"
+	fallFolder = f
+	-- outer tube (dark, so the bright rings and the character stand out)
+	for i = 0, 15 do
+		local a = i / 16 * math.pi * 2
+		part({
+			Name = "Wall",
+			Material = Enum.Material.Neon,
+			Color = darker(color, 0.72),
+			Size = Vector3.new(2 * (RING_R + 3) * math.tan(math.pi / 16) + 0.4, TUBE_LEN + 20, 1),
+			CFrame = axis * CFrame.new(0, TUBE_TOP - TUBE_LEN / 2, 0) * CFrame.Angles(0, a, 0) * CFrame.new(0, 0, RING_R + 3),
+			Parent = f,
+		})
+	end
+	-- a lid on top (otherwise the sky shows through) and the light at the bottom: where we are going
+	part({
+		Name = "Lid",
+		Shape = Enum.PartType.Cylinder,
+		Material = Enum.Material.Neon,
+		Color = darker(color, 0.82),
+		Size = Vector3.new(1, 2 * RING_R + 10, 2 * RING_R + 10),
+		CFrame = axis * CFrame.new(0, TUBE_TOP + 8, 0) * CFrame.Angles(0, 0, math.pi / 2),
+		Parent = f,
 	})
-	core.BackgroundColor3 = lighter(color, 0.45)
-	emojiLabel.Text = info.emoji
-	nameLabel.Text = string.upper(info.name)
-	subLabel.TextColor3 = lighter(color, 0.6)
-	fitCard()
-	local live: { { inst: GuiObject, born: number, kind: string, angle: number? } } = {}
-	local ringT, lineT, t = 0, 0, 0
-	tunnelConn = RunService.RenderStepped:Connect(function(dt)
-		t += dt
-		ringT += dt
-		lineT += dt
-		local size = fxLayer.AbsoluteSize
-		local diag = math.sqrt(size.X ^ 2 + size.Y ^ 2)
-		if ringT > 0.085 then
-			ringT = 0
-			local r = Instance.new("Frame")
-			r.AnchorPoint = Vector2.new(0.5, 0.5)
-			r.Position = UDim2.fromScale(0.5, 0.5)
-			r.BackgroundTransparency = 1
-			local c = Instance.new("UICorner")
-			c.CornerRadius = UDim.new(1, 0)
-			c.Parent = r
-			local s = Instance.new("UIStroke")
-			s.Color = if #live % 2 == 0 then lighter(color, 0.25) else lighter(color, 0.7)
-			s.Parent = r
-			r.Parent = fxLayer
-			table.insert(live, { inst = r, born = t, kind = "ring" })
+	part({
+		Name = "Glow",
+		Shape = Enum.PartType.Cylinder,
+		Material = Enum.Material.Neon,
+		Color = lighter(color, 0.55),
+		Size = Vector3.new(1, 2 * RING_R + 6, 2 * RING_R + 6),
+		CFrame = axis * CFrame.new(0, TUBE_TOP - TUBE_LEN - 6, 0) * CFrame.Angles(0, 0, math.pi / 2),
+		Parent = f,
+	})
+	-- spiral rings: each one a broken circle of glowing segments
+	local moving: { BasePart } = {}
+	local segLen = 2 * math.pi * RING_R / RING_SEG * 0.62
+	for i = 1, RING_N do
+		local c = if i % 2 == 0 then lighter(color, 0.2) else lighter(color, 0.75)
+		for _ = 1, RING_SEG do
+			table.insert(moving, part({
+				Name = "Ring",
+				Material = Enum.Material.Neon,
+				Color = c,
+				Size = Vector3.new(segLen, 0.7, 1.1),
+				Parent = f,
+			}))
 		end
-		while lineT > 0.022 do
-			lineT -= 0.022
-			local l = Instance.new("Frame")
-			l.AnchorPoint = Vector2.new(0.5, 0.5)
-			l.BorderSizePixel = 0
-			l.BackgroundColor3 = Color3.new(1, 1, 1)
-			l.Parent = fxLayer
-			table.insert(live, { inst = l, born = t, kind = "line", angle = math.random() * math.pi * 2 })
-		end
-		local cx, cy = size.X / 2, size.Y / 2
-		for i = #live, 1, -1 do
-			local e = live[i]
-			local age = t - e.born
-			if e.kind == "ring" then
-				local a = age / 0.7
-				if a >= 1 then
-					e.inst:Destroy()
-					table.remove(live, i)
-				else
-					local k = a ^ 2.4
-					local d = 20 + k * diag * 1.25
-					e.inst.Size = UDim2.fromOffset(d, d)
-					local s = e.inst:FindFirstChildOfClass("UIStroke") :: UIStroke
-					s.Thickness = 2 + k * 46
-					s.Transparency = 0.15 + 0.5 * a
-				end
-			else
-				local a = age / 0.38
-				if a >= 1 then
-					e.inst:Destroy()
-					table.remove(live, i)
-				else
-					local k = a ^ 2
-					local r = 60 + k * diag * 0.6
-					local len = 18 + k * 240
-					local ang = e.angle :: number
-					e.inst.Position = UDim2.fromOffset(cx + math.cos(ang) * r, cy + math.sin(ang) * r)
-					e.inst.Rotation = math.deg(ang)
-					e.inst.Size = UDim2.fromOffset(len, 3 + k * 6)
-					e.inst.BackgroundTransparency = 0.1 + 0.8 * a
-				end
+	end
+	local lines: { { p: BasePart, a: number, r: number, off: number } } = {}
+	for i = 1, LINE_N do
+		local p = part({
+			Name = "SpeedLine",
+			Material = Enum.Material.Neon,
+			Color = if i % 3 == 0 then lighter(color, 0.6) else Color3.new(1, 1, 1),
+			Transparency = 0.25,
+			Size = Vector3.new(0.18, 7 + math.random() * 6, 0.18),
+			Parent = f,
+		})
+		table.insert(lines, { p = p, a = math.random() * math.pi * 2, r = 5 + math.random() * 7, off = math.random() * TUBE_LEN })
+	end
+	-- sparks rushing up from the bottom
+	local sparkBase = part({
+		Name = "Sparks",
+		Transparency = 1,
+		Size = Vector3.new(2 * RING_R, 1, 2 * RING_R),
+		CFrame = axis * CFrame.new(0, -30, 0),
+		Parent = f,
+	})
+	local pe = Instance.new("ParticleEmitter")
+	pe.Texture = "rbxasset://textures/particles/sparkles_main.dds"
+	pe.Color = ColorSequence.new(Color3.new(1, 1, 1), lighter(color, 0.4))
+	pe.LightEmission = 1
+	pe.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.6), NumberSequenceKeypoint.new(1, 0.1) })
+	pe.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.1), NumberSequenceKeypoint.new(1, 1) })
+	pe.Lifetime = NumberRange.new(0.6, 1)
+	pe.Speed = NumberRange.new(55, 90)
+	pe.SpreadAngle = Vector2.new(8, 8)
+	pe.Rate = 110
+	pe.EmissionDirection = Enum.NormalId.Top
+	pe.Parent = sparkBase
+	-- a light on the character (Neon doesn't light anything up)
+	local center = axis
+	local lamp = part({ Name = "Lamp", Transparency = 1, Size = Vector3.one, CFrame = center * CFrame.new(0, -6, -5), Parent = f })
+	local light = Instance.new("PointLight")
+	light.Color = lighter(color, 0.6)
+	light.Range = 28
+	light.Brightness = 6
+	light.Parent = lamp
+	f.Parent = workspace
+
+	local copy, chum = fallCopy(char, center, f)
+	local croot = copy and copy:FindFirstChild("HumanoidRootPart") :: BasePart?
+	if chum then
+		local animate = char:FindFirstChild("Animate")
+		local folder = animate and animate:FindFirstChild("fall")
+		local anim = folder and folder:FindFirstChildOfClass("Animation")
+		local animator = chum:FindFirstChildOfClass("Animator")
+		if anim and animator then
+			local ok, tr = pcall(animator.LoadAnimation, animator, anim)
+			if ok and tr then
+				tr.Priority = Enum.AnimationPriority.Action
+				tr.Looped = true
+				tr:Play(0.05, 1, 1.4)
 			end
 		end
-		local pulse = 0.16 + 0.025 * math.sin(t * 18)
-		core.Size = UDim2.fromScale(pulse, pulse)
+	end
+
+	local cam = workspace.CurrentCamera
+	cam.CameraType = Enum.CameraType.Scriptable
+	local t = 0
+	local cfs = table.create(#moving)
+	local lineParts = table.create(LINE_N)
+	for i, l in lines do
+		lineParts[i] = l.p
+	end
+	local lineCfs = table.create(LINE_N)
+	fallConn = RunService.RenderStepped:Connect(function(dt)
+		t += dt
+		-- rings rise past the character; each ring is turned a bit more than the last: a spiral
+		local k = 0
+		for i = 1, RING_N do
+			local y = TUBE_TOP - ((i * RING_GAP - t * RING_SPEED) % TUBE_LEN)
+			local ring = axis * CFrame.new(0, y, 0) * CFrame.Angles(0, i * 0.42 + t * 1.1, 0)
+			for s = 1, RING_SEG do
+				k += 1
+				cfs[k] = ring * CFrame.Angles(0, s / RING_SEG * math.pi * 2, 0) * CFrame.new(0, 0, RING_R)
+			end
+		end
+		workspace:BulkMoveTo(moving, cfs, Enum.BulkMoveMode.FireCFrameChanged)
+		for i, l in lines do
+			local y = TUBE_TOP - ((l.off - t * LINE_SPEED) % TUBE_LEN)
+			lineCfs[i] = axis * CFrame.new(math.cos(l.a) * l.r, y, math.sin(l.a) * l.r)
+		end
+		workspace:BulkMoveTo(lineParts, lineCfs, Enum.BulkMoveMode.FireCFrameChanged)
+		-- the character tumbles slowly: spins, sways and wobbles
+		if croot and croot.Parent then
+			croot.CFrame = center
+				* CFrame.new(math.sin(t * 2.3) * 0.8, math.sin(t * 3.1) * 0.4, math.cos(t * 1.9) * 0.6)
+				* CFrame.Angles(math.sin(t * 2.6) * 0.22, t * 1.7, math.cos(t * 2.1) * 0.18)
+		end
+		-- camera below and in front, looking up at the character, with a light shake
+		local shake = Vector3.new(math.noise(t * 9, 1) * 0.25, math.noise(t * 9, 2) * 0.25, 0)
+		cam.CameraType = Enum.CameraType.Scriptable
+		cam.CFrame = CFrame.lookAt((center * CFrame.new(0, -7.5, -9)).Position + shake, (center * CFrame.new(0, 0.6, 0)).Position)
+		-- the focus drives lighting/rendering detail: it must be here, not at the real (already moved) character
+		cam.Focus = center
 	end)
-	cardScale.Scale *= 0.6
-	local target = cardScale.Scale / 0.6
-	TweenService:Create(cardScale, TweenInfo.new(0.35, Enum.EasingStyle.Back), { Scale = target }):Play()
-end
-local function stopTunnel()
-	if tunnelConn then
-		tunnelConn:Disconnect()
-		tunnelConn = nil
-	end
-	for _, c in fxLayer:GetChildren() do
-		c:Destroy()
-	end
 end
 
 local function tween(obj: Instance, time: number, props: { [string]: any }, style: Enum.EasingStyle?)
@@ -607,7 +654,6 @@ local function endTrip(t: { [string]: any })
 		cam.CameraSubject = hum
 		hum:Move(Vector3.zero)
 	end
-	tunnel.GroupTransparency = 1
 	flash.BackgroundTransparency = 1
 	gui.Enabled = false
 	setControls(true)
@@ -782,12 +828,12 @@ local function play(biome: string)
 	end
 
 	-- 3) tunnel
-	startTunnel(color, info)
-	tunnel.GroupTransparency = 0
+	startTunnel(color, char, o)
+	cam.FieldOfView = t.fov + 12
 	tween(flash, 0.3, { BackgroundTransparency = 1 })
 	local tunnelStart = os.clock()
 	waitFor(t, function()
-		return t.arrived ~= nil and os.clock() - tunnelStart > 0.85
+		return t.arrived ~= nil and os.clock() - tunnelStart > 1.6
 	end, 5)
 	qaHold(t, "tunnel")
 	if trip ~= t then
@@ -814,7 +860,6 @@ local function play(biome: string)
 		return
 	end
 	stopTunnel()
-	tunnel.GroupTransparency = 1
 	cam.FieldOfView = t.fov
 	local base = CFrame.new(target.Position) * flat(target)
 	local exitPortal = worldPortalAt(target, color, 2.6)
