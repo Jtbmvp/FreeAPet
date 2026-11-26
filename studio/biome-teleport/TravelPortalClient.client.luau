@@ -588,6 +588,10 @@ local function endTrip(t: { [string]: any })
 	cam.CameraType = Enum.CameraType.Custom
 	cam.FieldOfView = t.fov
 	local hum = t.hum :: Humanoid
+	if t.heldStates and hum then
+		hum:SetStateEnabled(Enum.HumanoidStateType.Freefall, true)
+		hum:SetStateEnabled(Enum.HumanoidStateType.Climbing, true)
+	end
 	if hum and hum.Parent then
 		cam.CameraSubject = hum
 		hum:Move(Vector3.zero)
@@ -790,7 +794,10 @@ local function play(biome: string)
 	local face = flat(target)
 	local d = face.LookVector
 	local right = face.RightVector
-	local goal = target.Position
+	-- stand exactly on the ground (the server's point sits a few studs up, so landing there floated
+	-- and then dropped into a fall/land animation pop when the controls came back)
+	local standY = root.Size.Y / 2 + (if hum.RigType == Enum.HumanoidRigType.R15 then hum.HipHeight else 2)
+	local goal = groundBelow(target.Position, 3) + Vector3.new(0, standY, 0)
 	local startPos = goal - d * DROP_BACK + Vector3.new(0, DROP_H, 0)
 	local f = Instance.new("Folder")
 	f.Name = "TravelSkyDrop"
@@ -801,6 +808,12 @@ local function play(biome: string)
 	pose(rig, 1.45, 0.5) -- spread eagle
 	root.Anchored = true
 	char:PivotTo(CFrame.new(goal) * face)
+	-- while it waits anchored, the hidden humanoid used to drift into Freefall/Climbing and came
+	-- back playing those animations at the swap: keep it standing (re-enabled in endTrip)
+	hum:SetStateEnabled(Enum.HumanoidStateType.Freefall, false)
+	hum:SetStateEnabled(Enum.HumanoidStateType.Climbing, false)
+	hum:ChangeState(Enum.HumanoidStateType.Running)
+	t.heldStates = true
 	t.hiddenParts = {}
 	for _, x in char:GetDescendants() do
 		if x:IsA("BasePart") or x:IsA("Decal") then
@@ -875,7 +888,8 @@ local function play(biome: string)
 		local wob = 1 - g
 		local yaw = math.sin(tau * 1.4) * 0.35 * wob
 		local roll = math.sin(tau * 2.3) * 0.2 * wob - sway * 0.05
-		local pitch = -1.25 * wob - 0.08 * g
+		local landA = if landT >= 0 then smooth((os.clock() - landT) / 0.3) else 0
+		local pitch = -1.25 * wob - 0.08 * g * (1 - landA)
 		local body = CFrame.new(pos) * face * CFrame.Angles(0, yaw, 0)
 		if croot and croot.Parent then
 			croot.CFrame = body * CFrame.Angles(pitch, 0, roll)
@@ -891,6 +905,7 @@ local function play(biome: string)
 		elseif landT >= 0 then
 			local a = math.clamp((os.clock() - landT) / 0.35, 0, 1)
 			chuteScale = math.max(1 - a * a, 0.01)
+			pose(rig, 2.7 - 2.6 * landA, 0.15 * (1 - landA)) -- arms come down instead of snapping
 		end
 		if chuteShown then
 			local s = math.max(chuteScale, 0.01)
@@ -940,7 +955,6 @@ local function play(biome: string)
 		if tau >= total and landT < 0 then
 			landT = os.clock()
 			landPoof(goal, color)
-			pose(rig, 0.1, 0)
 		end
 		if landT >= 0 and os.clock() - landT >= LAND_T then
 			done = true
@@ -955,8 +969,12 @@ local function play(biome: string)
 	if trip ~= t then
 		return
 	end
-	-- swap the copy for the real character, standing where it landed
+	-- swap the copy for the real character in one frame, standing where it landed
 	RunService:UnbindFromRenderStep("TravelPortalDrop")
+	-- hand the default camera a view already behind the character (where the drop camera ends),
+	-- so switching back to Custom does not jump
+	cam.CFrame = CFrame.lookAt(goal - d * 12 + Vector3.new(0, 4, 0), goal + Vector3.new(0, 1.5, 0))
+	cam.Focus = CFrame.new(goal)
 	for _, x in t.hiddenParts or {} do
 		if x.Parent then
 			x.LocalTransparencyModifier = 0
@@ -966,6 +984,17 @@ local function play(biome: string)
 	stopDrop()
 	char:PivotTo(CFrame.new(goal) * face)
 	endTrip(t)
+	-- no leftover speed and straight into the standing state (no fall/land animation)
+	for _, x in char:GetDescendants() do
+		if x:IsA("BasePart") then
+			x.AssemblyLinearVelocity = Vector3.zero
+			x.AssemblyAngularVelocity = Vector3.zero
+		end
+	end
+	if hum.Parent and hum.Health > 0 then
+		hum.PlatformStand = false
+		hum:ChangeState(Enum.HumanoidStateType.Running)
+	end
 end
 
 Teleport.OnClientEvent:Connect(function(kind, a, b, c, d)
