@@ -21,12 +21,12 @@ local G = Theme.Grad
 local F = Theme.Fonts
 
 local BIOMES = {
-	{ id = "Base", name = "My Base", emoji = "🏠", grad = G.Green, zone = nil },
-	{ id = "Lobby", name = "Lobby", emoji = "⛲", grad = G.Gold, zone = "Base" },
-	{ id = "Forest", name = "Forest", emoji = "🌲", grad = G.Forest, zone = "Forest" },
-	{ id = "Desert", name = "Desert", emoji = "🏜️", grad = G.Desert, zone = "Desert" },
-	{ id = "Ice", name = "Ice", emoji = "❄️", grad = G.Heal, zone = "Ice" },
-	{ id = "Kingdom", name = "Forgotten Kingdom", emoji = "🏰", grad = G.Purple, zone = "Kingdom" },
+	{ id = "Base", name = "My Base", emoji = "🏠", image = "74579908738802", grad = G.Green, zone = nil },
+	{ id = "Lobby", name = "Lobby", emoji = "⛲", image = "77141567044546", grad = G.Gold, zone = "Base" },
+	{ id = "Forest", name = "Forest", emoji = "🌲", image = "118986846511929", grad = G.Forest, zone = "Forest" },
+	{ id = "Desert", name = "Desert", emoji = "🏜️", image = "130846288095244", grad = G.Desert, zone = "Desert" },
+	{ id = "Ice", name = "Ice", emoji = "❄️", image = "126009387604003", grad = G.Heal, zone = "Ice" },
+	{ id = "Kingdom", name = "Forgotten Kingdom", emoji = "🏰", image = "96027797689391", grad = G.Purple, zone = "Kingdom" },
 }
 
 local canvas = Skin.Canvas(gui)
@@ -116,7 +116,7 @@ local dim = new("TextButton", {
 	Size = UDim2.fromScale(1, 1), Visible = false, ZIndex = 5, Parent = canvas,
 })
 local panel = new("Frame", {
-	Name = "Panel", AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromOffset(780, 400),
+	Name = "Panel", AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromOffset(860, 560),
 	BackgroundColor3 = C.Panel, ZIndex = 6, Parent = dim,
 }, { corner(18), stroke(4) })
 local panelScale = new("UIScale", { Parent = panel })
@@ -129,40 +129,93 @@ local close = button(header, "X", G.Close, UDim2.fromOffset(48, 48), UDim2.new(1
 close.ZIndex = 7
 local status = text({ Name = "Status", Text = "Pick where to travel", FontFace = F.Bold, TextColor3 = C.Muted, Size = UDim2.new(1, -40, 0, 22), Position = UDim2.fromOffset(20, 72), MaxSize = 18, ZIndex = 7, Parent = panel })
 
-local row = new("Frame", { Name = "Cards", Size = UDim2.new(1, -40, 1, -120), Position = UDim2.fromOffset(20, 104), BackgroundTransparency = 1, ZIndex = 6, Parent = panel }, {
-	new("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 10), SortOrder = Enum.SortOrder.LayoutOrder, HorizontalAlignment = Enum.HorizontalAlignment.Center }),
+-- 3 x 2 grid of picture cards (one photo of each island, taken in Studio: build/travel-ui in the main repo)
+local grid = new("Frame", { Name = "Cards", Size = UDim2.new(1, -40, 1, -122), Position = UDim2.fromOffset(20, 104), BackgroundTransparency = 1, ZIndex = 6, Parent = panel }, {
+	new("UIGridLayout", { CellSize = UDim2.new(1 / 3, -10, 0.5, -7), CellPadding = UDim2.fromOffset(14, 14), SortOrder = Enum.SortOrder.LayoutOrder,
+		HorizontalAlignment = Enum.HorizontalAlignment.Center, VerticalAlignment = Enum.VerticalAlignment.Center }),
 })
 
+local function goTo(b)
+	if player:GetAttribute("TravelPortalActive") then
+		return -- a trip is already playing (TravelPortalClient)
+	end
+	status.Text = "Teleporting to " .. b.name .. "..."
+	status.TextColor3 = C.Muted
+	Teleport:FireServer("go", b.id)
+end
+
+local IMG_ZOOM = 1.1 -- hover zoom of the photo
 local cards = {}
 for i, b in ipairs(BIOMES) do
-	local f = new("Frame", { Name = b.id, Size = UDim2.new(1 / #BIOMES, -9, 1, 0), BackgroundColor3 = C.Row, LayoutOrder = i, ZIndex = 7, Parent = row }, { corner(14), stroke(3) })
-	new("Frame", { Name = "Band", Size = UDim2.new(1, 0, 0, 12), BackgroundColor3 = C.White, ZIndex = 8, Parent = f }, { corner(14), grad(b.grad) })
-	local badge = new("Frame", { Name = "Badge", AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 22), Size = UDim2.fromScale(0.72, 0.72), BackgroundColor3 = C.White, ZIndex = 8, Parent = f },
-		{ corner(16), stroke(3), grad(b.grad), new("UIAspectRatioConstraint", { AspectRatio = 1 }), new("UISizeConstraint", { MaxSize = Vector2.new(84, 84) }) })
-	text({ Name = "Emoji", Text = b.emoji, FontFace = F.Num, Size = UDim2.fromScale(0.8, 0.8), Position = UDim2.fromScale(0.1, 0.1), MaxSize = 54, ZIndex = 9, Parent = badge })
-	local name = text({ Name = "Title", Text = b.name, TextWrapped = true, Size = UDim2.new(1, -10, 0, 44), Position = UDim2.new(0, 5, 1, -112), MaxSize = 20, ZIndex = 8, Parent = f })
-	textStroke(2).Parent = name
-	local here = text({ Name = "Here", Text = "YOU ARE HERE", FontFace = F.Bold, TextColor3 = C.Gold, Size = UDim2.new(1, -10, 0, 14), Position = UDim2.new(0, 5, 1, -66), MaxSize = 12, Visible = false, ZIndex = 8, Parent = f })
-	local go = button(f, if b.id == "Base" then "Go home" else "Teleport", b.grad, UDim2.new(1, -14, 0, 42), UDim2.new(0.5, 0, 1, -8), Vector2.new(0.5, 1))
+	-- holder: carries the biome-coloured border; the CanvasGroup inside clips the photo to round corners
+	local f = new("Frame", { Name = b.id, BackgroundColor3 = b.grad[2], LayoutOrder = i, ZIndex = 7, Parent = grid }, { corner(16) })
+	local border = new("UIStroke", { Thickness = 4, Color = b.grad[1], ApplyStrokeMode = Enum.ApplyStrokeMode.Border, Parent = f })
+	local group = new("CanvasGroup", { Name = "Clip", Size = UDim2.fromScale(1, 1), BackgroundColor3 = b.grad[2], ZIndex = 7, Parent = f }, { corner(16) })
+	local photo = new("ImageLabel", {
+		Name = "Photo", Image = "rbxassetid://" .. b.image, ScaleType = Enum.ScaleType.Crop, BackgroundTransparency = 1,
+		AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromScale(1, 1), ZIndex = 7, Parent = group,
+	})
+	-- dark fade at the bottom so the name and button read on any picture
+	new("Frame", { Name = "Shade", AnchorPoint = Vector2.new(0, 1), Position = UDim2.fromScale(0, 1), Size = UDim2.fromScale(1, 0.62),
+		BackgroundColor3 = Color3.fromRGB(8, 14, 26), BorderSizePixel = 0, ZIndex = 8, Parent = group }, {
+		new("UIGradient", { Rotation = 90, Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.55, 0.35), NumberSequenceKeypoint.new(1, 0.1) }) }),
+	})
+	-- biome colour strip across the top
+	new("Frame", { Name = "Band", Size = UDim2.new(1, 0, 0, 7), BackgroundColor3 = C.White, BorderSizePixel = 0, ZIndex = 9, Parent = group }, { grad(b.grad) })
+	local glow = new("Frame", { Name = "Glow", Size = UDim2.fromScale(1, 1), BackgroundColor3 = C.White, BackgroundTransparency = 1, BorderSizePixel = 0, ZIndex = 9, Parent = group })
+
+	-- the whole picture is clickable too
+	local hit = new("TextButton", { Name = "Hit", Text = "", AutoButtonColor = false, BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1), ZIndex = 10, Parent = f })
+
+	local name = text({ Name = "Title", Text = string.upper(b.name), TextWrapped = true, TextXAlignment = Enum.TextXAlignment.Left,
+		AnchorPoint = Vector2.new(0, 1), Size = UDim2.new(1, -20, 0.24, 0), Position = UDim2.new(0, 10, 1, -54), MaxSize = 28, ZIndex = 11, Parent = f })
+	textStroke(3).Parent = name
+	local here = new("Frame", { Name = "HereTag", Position = UDim2.fromOffset(8, 14), Size = UDim2.fromOffset(112, 22), BackgroundColor3 = C.Gold, Visible = false, ZIndex = 11, Parent = f },
+		{ corner(11), stroke(2) })
+	local hereText = text({ Name = "Here", Text = "YOU ARE HERE", FontFace = F.Bold, TextColor3 = C.Outline, Size = UDim2.new(1, -10, 1, -6), Position = UDim2.fromOffset(5, 3), MaxSize = 12, ZIndex = 12, Parent = here })
+	local go = button(f, if b.id == "Base" then "Go home" else "Travel", b.grad, UDim2.new(1, -16, 0, 40), UDim2.new(0.5, 0, 1, -8), Vector2.new(0.5, 1))
 	go.Name = "Teleport"
-	go.ZIndex = 8
-	Skin.Surface(f)
-	f.BackgroundColor3 = C.Row
-	cards[b.id] = { frame = f, go = go, here = here, badge = badge, name = name }
-	go.MouseButton1Click:Connect(function()
-		if player:GetAttribute("TravelPortalActive") then
-			return -- a trip is already playing (TravelPortalClient)
+	go.ZIndex = 11
+	for _, d in go:GetDescendants() do
+		if d:IsA("GuiObject") then
+			d.ZIndex = math.max(d.ZIndex, 12)
 		end
-		status.Text = "Teleporting to " .. b.name .. "..."
-		status.TextColor3 = C.Muted
-		Teleport:FireServer("go", b.id)
+	end
+	cards[b.id] = { frame = f, go = go, here = here, hereText = hereText, name = name }
+
+	local hovered = false
+	local function hover(on: boolean)
+		if hovered == on then
+			return
+		end
+		hovered = on
+		local ti = TweenInfo.new(0.18, Enum.EasingStyle.Quad)
+		local z = if on then IMG_ZOOM else 1
+		TweenService:Create(photo, ti, { Size = UDim2.fromScale(z, z) }):Play()
+		TweenService:Create(glow, ti, { BackgroundTransparency = if on then 0.88 else 1 }):Play()
+		TweenService:Create(border, ti, { Thickness = if on then 6 else 4, Color = if on then C.White else b.grad[1] }):Play()
+	end
+	hit.MouseEnter:Connect(function()
+		hover(true)
+	end)
+	hit.MouseLeave:Connect(function()
+		hover(false)
+	end)
+	go.MouseEnter:Connect(function()
+		hover(true)
+	end)
+	hit.MouseButton1Click:Connect(function()
+		goTo(b)
+	end)
+	go.MouseButton1Click:Connect(function()
+		goTo(b)
 	end)
 end
 
 local panelHost, fitScale = Skin.Holder(dim, panel)
 local function fit()
 	local phone = canvas.AbsoluteSize.Y < 500
-	local w, h = if phone then 860 else 780, if phone then 300 else 400
+	local w, h = if phone then 900 else 860, if phone then 430 else 560
 	panel.Size = UDim2.fromOffset(w, h)
 	Skin.Fit(panelHost, fitScale, canvas, w, h)
 end

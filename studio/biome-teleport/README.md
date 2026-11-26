@@ -31,6 +31,13 @@ Travel button appears at the top centre. The panel has 6 cards (🏠 My Base, �
 ❄️ Ice, 🏰 Forgotten Kingdom), marks "YOU ARE HERE" from the player's `Zone` attribute and hides on the arena
 server.
 
+Since 2026-11-26 the cards are photos of each island (3 x 2 grid): Studio captures cropped to 512x288 by
+`tools/travel-ui/crop_biomes.ps1` and uploaded as Images to the group (ids in `BIOMES[].image`: Base
+74579908738802, Lobby 77141567044546, Forest 118986846511929, Desert 130846288095244, Ice 126009387604003,
+Kingdom 96027797689391). Each card: photo in a rounded CanvasGroup, dark fade at the bottom, big name with
+outline, biome-coloured border and top strip, "Travel" / "Go home" button; the whole card is clickable and
+hover zooms the photo with a light glow. The panel is 860x560 (900x430 on phones) and is scaled to fit.
+
 ## Travel portal animation (2026-11-22)
 
 `StarterPlayerScripts.TravelPortalClient` (`TravelPortalClient.client.luau`, LocalScript) plays a cinematic for
