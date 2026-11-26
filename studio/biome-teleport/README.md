@@ -34,7 +34,7 @@ server.
 ## Travel portal animation (2026-11-22)
 
 `StarterPlayerScripts.TravelPortalClient` (`TravelPortalClient.client.luau`, LocalScript) plays a cinematic for
-every accepted trip (about 4 s); the portal model is described in `studio/portal/README.md`.
+every accepted trip (about 6 s); the portal model is described in `studio/portal/README.md`.
 
 1. Server accepts `("go", biome)` (same checks as before; repeated clicks while a trip is pending are ignored)
    and sends `("start", biome)` to the player and `("fx", "depart", player, cframe, biome)` to everyone.
@@ -42,13 +42,18 @@ every accepted trip (about 4 s); the portal model is described in `studio/portal
    the map (`6000 + (UserId % 16) * 400, -440, 0`; night void, stars, a nebula, the haze thinned locally)
    where the portal opens in the destination colour. Scripted camera; the character (root anchored, its
    own run/jump animations) runs and leaps into the vortex, which speeds up, white flash, `("enter")`.
-3. Tunnel screen: rings and speed lines in the biome colour, "TRAVELLING TO", the emoji and the name
-   (Montserrat Heavy, dark outline).
-4. Server does the real move to `TP_*` / the base spawn when `enter` arrives (or after 5 s anyway) and sends
-   `("fx", "arrive", ...)`. Client: a small portal opens behind the character, it walks out, the camera
-   eases back, controls and HUD return, the portal closes. Others only see the small portals on the spot.
+3. Server does the real move to `TP_*` / the base spawn when `enter` arrives (or after 5 s anyway) and sends
+   `("fx", "arrive", ...)`. Behind the white flash the client waits for it (up to 3 s), then removes the stage.
+4. Sky drop (2026-11-26, replaces the spiral tunnel and the small arrival portal): a client-only copy of the
+   character starts 190 studs above and 44 behind the arrival point and skydives onto the island, camera above
+   and behind looking down (Fortnite style). Free fall 1.3 s, belly-down, arms spread, wobbling, wind lines and
+   a few clouds; then a stud-style parachute (7 coloured Plastic blocks with studs + 4 lines) pops open, the fall
+   slows, it sways a little and lands softly on the point (2 s); a dust ring + puff, the canopy folds. The real
+   character waits at the point, root anchored and hidden locally (`LocalTransparencyModifier`), then takes the
+   copy's place; camera, controls and HUD return. Whole trip about 6 s. Others see the departure portal and a
+   dust ring at the arrival point.
 
 Safety: controls are frozen with a high-priority ContextActionService sink (the place has no PlayerModule);
-everything is undone after 8 s, on death or respawn; a character left on the stage is moved back.
-QA only: the player attribute `TravelPortalHold` = `stage` / `tunnel` / `arrive` pauses the trip at that
+everything is undone after 10 s, on death or respawn; a character left on the stage is moved back.
+QA only: the player attribute `TravelPortalHold` = `stage` / `fall` / `glide` pauses the trip at that
 moment for screenshots.

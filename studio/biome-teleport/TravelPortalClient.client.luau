@@ -4,12 +4,12 @@
 --   1. a quick flash, and the character is moved to a hidden stage under the map (night void with stars)
 --      where a portal (ReplicatedStorage.TravelPortal, modelled in Blender) opens in the destination colour;
 --   2. cinematic camera: the character runs and leaps into the vortex, the vortex speeds up, white flash;
---   3. fall tunnel: a client-only copy of the character tumbles down a spiral tunnel in the destination
---      colour (rings, speed lines, sparks; camera below it), built next to the hidden stage;
---      meanwhile we send ("enter") and the server does the real move to TP_* / the base spawn;
---   4. on ("fx", "arrive") a small portal opens behind the character at the destination, the character
---      walks out, the camera eases back to normal, the controls come back and the portal closes.
--- Other players only see the portal on the spot ("fx" depart/arrive), never the stage or the tunnel.
+--   3. sky drop: behind the flash we send ("enter") and the server does the real move to TP_* / the base
+--      spawn; then a client-only copy of the character skydives onto the destination island from ~190 studs,
+--      camera above and behind (Fortnite style): free fall with arms spread, a stud-style parachute opens
+--      halfway, it glides down and lands softly on the arrival point (dust ring); the real character waits
+--      there anchored and hidden, then takes the copy's place and the controls come back.
+-- Other players only see the portal where the trip starts and a dust ring where it ends ("fx" depart/arrive).
 -- Safety: everything is undone after SAFETY seconds whatever happens, and on death/respawn.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -20,7 +20,7 @@ local player = Players.LocalPlayer
 local Teleport = ReplicatedStorage:WaitForChild("BiomeTeleportRemotes"):WaitForChild("Teleport") :: RemoteEvent
 local TEMPLATE = ReplicatedStorage:WaitForChild("TravelPortal") :: Model
 
-local SAFETY = 8
+local SAFETY = 10
 local CENTER = Vector3.new(0, TEMPLATE:GetAttribute("PortalCenterY") or 9.6, 0)
 
 local BIOMES = {
@@ -312,13 +312,16 @@ flash.ZIndex = 10
 flash.Parent = gui
 
 --------------------------------------------------------------------------------------------
--- Fall tunnel: a client-only copy of the character falls down a spiral tunnel in the
--- destination colour (built next to the hidden stage), while the server moves the real one.
--- The copy stays put and the tunnel rushes upward past it: rings, speed lines, sparks.
+-- Sky drop: a client-only copy of the character skydives onto the destination island, seen
+-- from above and behind (Fortnite style); halfway down a stud-style parachute opens, the fall
+-- slows and it lands softly on the arrival point. Meanwhile the real character is already there
+-- (moved by the server), anchored and hidden on this client only.
 --------------------------------------------------------------------------------------------
-local RING_N, RING_SEG, RING_R, RING_GAP, RING_SPEED = 16, 10, 13, 7, 62
-local LINE_N, LINE_SPEED = 30, 150
-local TUBE_TOP, TUBE_LEN = 44, 16 * 7
+local DROP_H = 190 -- studs above the arrival point
+local DROP_BACK = 44 -- starts this far behind the arrival point and glides in
+local FREE_T, OPEN_Y, GLIDE_T = 1.3, 60, 2.05
+local LAND_T = 0.45
+local WIND_N = 18
 
 local function fallCopy(char: Model, at: CFrame, parent: Instance): (Model?, Humanoid?)
 	local was = char.Archivable
@@ -337,6 +340,11 @@ local function fallCopy(char: Model, at: CFrame, parent: Instance): (Model?, Hum
 			d.CanTouch = false
 			d.Massless = true
 			d.Anchored = false
+			d.LocalTransparencyModifier = 0
+		elseif d:IsA("Decal") then
+			d.LocalTransparencyModifier = 0
+		elseif d:IsA("Motor6D") then
+			d.Transform = CFrame.identity
 		end
 	end
 	local hum = copy:FindFirstChildOfClass("Humanoid")
@@ -350,180 +358,104 @@ local function fallCopy(char: Model, at: CFrame, parent: Instance): (Model?, Hum
 	hum.EvaluateStateMachine = false
 	hum.PlatformStand = true
 	root.Anchored = true
-	copy.Name = "TravelFallCopy"
+	copy.Name = "TravelDropCopy"
 	copy:PivotTo(at)
 	copy.Parent = parent
-	if not hum:FindFirstChildOfClass("Animator") then
-		Instance.new("Animator").Parent = hum
-	end
 	return copy, hum
 end
 
-local fallConn: RBXScriptConnection? = nil
-local fallFolder: Folder? = nil
-local function stopTunnel()
-	if fallConn then
-		fallConn:Disconnect()
-		fallConn = nil
+-- arms/legs posed by hand on the copy (R15 and R6): the angle turns the limb out to the side
+local LIMBS = {
+	RightShoulder = 1, ["Right Shoulder"] = 1, LeftShoulder = -1, ["Left Shoulder"] = -1,
+	RightHip = 2, ["Right Hip"] = 2, LeftHip = -2, ["Left Hip"] = -2,
+}
+local function rigOf(copy: Model): { [Motor6D]: CFrame }
+	local m = {}
+	for _, d in copy:GetDescendants() do
+		if d:IsA("Motor6D") and LIMBS[d.Name] then
+			m[d] = d.C0
+		end
 	end
-	if fallFolder then
-		fallFolder:Destroy()
-		fallFolder = nil
+	return m
+end
+local function pose(rig: { [Motor6D]: CFrame }, arms: number, legs: number)
+	for j, c0 in rig do
+		local k = LIMBS[j.Name]
+		local a = if math.abs(k) == 1 then arms * k else legs * k / 2
+		j.C0 = CFrame.new(c0.Position) * CFrame.Angles(0, 0, a) * c0.Rotation
 	end
 end
 
--- o: stage origin; the tunnel axis sits 320 studs to the side of the stage (same private slot)
-local function startTunnel(color: Color3, char: Model, o: CFrame)
-	stopTunnel()
-	local axis = o * CFrame.new(0, 0, 320)
-	local f = Instance.new("Folder")
-	f.Name = "TravelFallTunnel"
-	fallFolder = f
-	-- outer tube (dark, so the bright rings and the character stand out)
-	for i = 0, 15 do
-		local a = i / 16 * math.pi * 2
-		part({
-			Name = "Wall",
-			Material = Enum.Material.Neon,
-			Color = darker(color, 0.72),
-			Size = Vector3.new(2 * (RING_R + 3) * math.tan(math.pi / 16) + 0.4, TUBE_LEN + 20, 1),
-			CFrame = axis * CFrame.new(0, TUBE_TOP - TUBE_LEN / 2, 0) * CFrame.Angles(0, a, 0) * CFrame.new(0, 0, RING_R + 3),
-			Parent = f,
-		})
-	end
-	-- a lid on top (otherwise the sky shows through) and the light at the bottom: where we are going
-	part({
-		Name = "Lid",
-		Shape = Enum.PartType.Cylinder,
-		Material = Enum.Material.Neon,
-		Color = darker(color, 0.82),
-		Size = Vector3.new(1, 2 * RING_R + 10, 2 * RING_R + 10),
-		CFrame = axis * CFrame.new(0, TUBE_TOP + 8, 0) * CFrame.Angles(0, 0, math.pi / 2),
-		Parent = f,
+-- dust ring + puff on the ground (the landing; also what other players see on arrival)
+local function landPoof(at: Vector3, color: Color3)
+	local g = groundBelow(at, 3)
+	local ring = part({
+		Name = "TravelLandRing", Shape = Enum.PartType.Cylinder, Material = Enum.Material.Neon,
+		Color = lighter(color, 0.5), Transparency = 0.15, Size = Vector3.new(0.15, 2, 2),
+		CFrame = CFrame.new(g + Vector3.new(0, 0.12, 0)) * CFrame.Angles(0, 0, math.pi / 2), Parent = workspace,
 	})
-	part({
-		Name = "Glow",
-		Shape = Enum.PartType.Cylinder,
-		Material = Enum.Material.Neon,
-		Color = lighter(color, 0.55),
-		Size = Vector3.new(1, 2 * RING_R + 6, 2 * RING_R + 6),
-		CFrame = axis * CFrame.new(0, TUBE_TOP - TUBE_LEN - 6, 0) * CFrame.Angles(0, 0, math.pi / 2),
-		Parent = f,
-	})
-	-- spiral rings: each one a broken circle of glowing segments
-	local moving: { BasePart } = {}
-	local segLen = 2 * math.pi * RING_R / RING_SEG * 0.62
-	for i = 1, RING_N do
-		local c = if i % 2 == 0 then lighter(color, 0.2) else lighter(color, 0.75)
-		for _ = 1, RING_SEG do
-			table.insert(moving, part({
-				Name = "Ring",
-				Material = Enum.Material.Neon,
-				Color = c,
-				Size = Vector3.new(segLen, 0.7, 1.1),
-				Parent = f,
-			}))
-		end
-	end
-	local lines: { { p: BasePart, a: number, r: number, off: number } } = {}
-	for i = 1, LINE_N do
-		local p = part({
-			Name = "SpeedLine",
-			Material = Enum.Material.Neon,
-			Color = if i % 3 == 0 then lighter(color, 0.6) else Color3.new(1, 1, 1),
-			Transparency = 0.25,
-			Size = Vector3.new(0.18, 7 + math.random() * 6, 0.18),
-			Parent = f,
-		})
-		table.insert(lines, { p = p, a = math.random() * math.pi * 2, r = 5 + math.random() * 7, off = math.random() * TUBE_LEN })
-	end
-	-- sparks rushing up from the bottom
-	local sparkBase = part({
-		Name = "Sparks",
-		Transparency = 1,
-		Size = Vector3.new(2 * RING_R, 1, 2 * RING_R),
-		CFrame = axis * CFrame.new(0, -30, 0),
-		Parent = f,
-	})
+	TweenService:Create(ring, TweenInfo.new(0.6, Enum.EasingStyle.Quad), { Size = Vector3.new(0.15, 17, 17), Transparency = 1 }):Play()
 	local pe = Instance.new("ParticleEmitter")
-	pe.Texture = "rbxasset://textures/particles/sparkles_main.dds"
-	pe.Color = ColorSequence.new(Color3.new(1, 1, 1), lighter(color, 0.4))
-	pe.LightEmission = 1
-	pe.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.6), NumberSequenceKeypoint.new(1, 0.1) })
-	pe.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.1), NumberSequenceKeypoint.new(1, 1) })
-	pe.Lifetime = NumberRange.new(0.6, 1)
-	pe.Speed = NumberRange.new(55, 90)
-	pe.SpreadAngle = Vector2.new(8, 8)
-	pe.Rate = 110
-	pe.EmissionDirection = Enum.NormalId.Top
-	pe.Parent = sparkBase
-	-- a light on the character (Neon doesn't light anything up)
-	local center = axis
-	local lamp = part({ Name = "Lamp", Transparency = 1, Size = Vector3.one, CFrame = center * CFrame.new(0, -6, -5), Parent = f })
-	local light = Instance.new("PointLight")
-	light.Color = lighter(color, 0.6)
-	light.Range = 28
-	light.Brightness = 6
-	light.Parent = lamp
-	f.Parent = workspace
+	pe.Texture = "rbxasset://textures/particles/smoke_main.dds"
+	pe.Color = ColorSequence.new(Color3.fromRGB(240, 232, 214))
+	pe.Size = NumberSequence.new(1.6, 4)
+	pe.Transparency = NumberSequence.new(0.35, 1)
+	pe.Lifetime = NumberRange.new(0.6, 0.9)
+	pe.Speed = NumberRange.new(9, 14)
+	pe.SpreadAngle = Vector2.new(180, 8)
+	pe.Drag = 5
+	pe.EmissionDirection = Enum.NormalId.Right -- the cylinder's axis is up: Right fans out flat
+	pe.Rate = 0
+	pe.Parent = ring
+	pe:Emit(22)
+	task.delay(1.2, ring.Destroy, ring)
+end
 
-	local copy, chum = fallCopy(char, center, f)
-	local croot = copy and copy:FindFirstChild("HumanoidRootPart") :: BasePart?
-	if chum then
-		local animate = char:FindFirstChild("Animate")
-		local folder = animate and animate:FindFirstChild("fall")
-		local anim = folder and folder:FindFirstChildOfClass("Animation")
-		local animator = chum:FindFirstChildOfClass("Animator")
-		if anim and animator then
-			local ok, tr = pcall(animator.LoadAnimation, animator, anim)
-			if ok and tr then
-				tr.Priority = Enum.AnimationPriority.Action
-				tr.Looped = true
-				tr:Play(0.05, 1, 1.4)
-			end
+-- stud-style parachute in root space (forward = -Z): a curved canopy of coloured blocks + 4 lines
+local function buildChute(color: Color3, parent: Instance)
+	local parts, rel, size0 = {}, {}, {}
+	local function add(p: BasePart, cf: CFrame)
+		p.Parent = parent
+		table.insert(parts, p)
+		rel[p] = cf
+		size0[p] = p.Size
+	end
+	local R, top, zc = 8, 9.5, -1.2
+	local cy = top - R
+	for i = -3, 3 do
+		local phi = i * 0.27
+		local p = part({
+			Name = "Canopy", Material = Enum.Material.Plastic,
+			Color = if i % 2 == 0 then color else lighter(color, 0.82),
+			Size = Vector3.new(2 * R * math.sin(0.135) * 1.1, 0.5, 5.6),
+			TopSurface = Enum.SurfaceType.Studs, BottomSurface = Enum.SurfaceType.Inlet,
+		})
+		add(p, CFrame.new(R * math.sin(phi), cy + R * math.cos(phi), zc) * CFrame.Angles(0, 0, -phi))
+	end
+	local ex, ey = R * math.sin(0.81) * 0.98, cy + R * math.cos(0.81) - 0.3
+	for _, sx in { -1, 1 } do
+		for _, sz in { -2.4, 2.4 } do
+			local from = Vector3.new(sx * 1.1, 1.6, 0)
+			local to = Vector3.new(sx * ex, ey, zc + sz)
+			local p = part({ Name = "Line", Material = Enum.Material.Neon, Color = Color3.new(1, 1, 1), Size = Vector3.new(0.09, 0.09, (to - from).Magnitude) })
+			add(p, CFrame.lookAt((from + to) / 2, to))
 		end
 	end
+	return parts, rel, size0
+end
 
-	local cam = workspace.CurrentCamera
-	cam.CameraType = Enum.CameraType.Scriptable
-	local t = 0
-	local cfs = table.create(#moving)
-	local lineParts = table.create(LINE_N)
-	for i, l in lines do
-		lineParts[i] = l.p
+local dropFolder: Folder? = nil
+local function stopDrop()
+	RunService:UnbindFromRenderStep("TravelPortalDrop")
+	if dropFolder then
+		dropFolder:Destroy()
+		dropFolder = nil
 	end
-	local lineCfs = table.create(LINE_N)
-	fallConn = RunService.RenderStepped:Connect(function(dt)
-		t += dt
-		-- rings rise past the character; each ring is turned a bit more than the last: a spiral
-		local k = 0
-		for i = 1, RING_N do
-			local y = TUBE_TOP - ((i * RING_GAP - t * RING_SPEED) % TUBE_LEN)
-			local ring = axis * CFrame.new(0, y, 0) * CFrame.Angles(0, i * 0.42 + t * 1.1, 0)
-			for s = 1, RING_SEG do
-				k += 1
-				cfs[k] = ring * CFrame.Angles(0, s / RING_SEG * math.pi * 2, 0) * CFrame.new(0, 0, RING_R)
-			end
-		end
-		workspace:BulkMoveTo(moving, cfs, Enum.BulkMoveMode.FireCFrameChanged)
-		for i, l in lines do
-			local y = TUBE_TOP - ((l.off - t * LINE_SPEED) % TUBE_LEN)
-			lineCfs[i] = axis * CFrame.new(math.cos(l.a) * l.r, y, math.sin(l.a) * l.r)
-		end
-		workspace:BulkMoveTo(lineParts, lineCfs, Enum.BulkMoveMode.FireCFrameChanged)
-		-- the character tumbles slowly: spins, sways and wobbles
-		if croot and croot.Parent then
-			croot.CFrame = center
-				* CFrame.new(math.sin(t * 2.3) * 0.8, math.sin(t * 3.1) * 0.4, math.cos(t * 1.9) * 0.6)
-				* CFrame.Angles(math.sin(t * 2.6) * 0.22, t * 1.7, math.cos(t * 2.1) * 0.18)
-		end
-		-- camera below and in front, looking up at the character, with a light shake
-		local shake = Vector3.new(math.noise(t * 9, 1) * 0.25, math.noise(t * 9, 2) * 0.25, 0)
-		cam.CameraType = Enum.CameraType.Scriptable
-		cam.CFrame = CFrame.lookAt((center * CFrame.new(0, -7.5, -9)).Position + shake, (center * CFrame.new(0, 0.6, 0)).Position)
-		-- the focus drives lighting/rendering detail: it must be here, not at the real (already moved) character
-		cam.Focus = center
-	end)
+end
+
+local function smooth(a: number): number
+	a = math.clamp(a, 0, 1)
+	return a * a * (3 - 2 * a)
 end
 
 local function tween(obj: Instance, time: number, props: { [string]: any }, style: Enum.EasingStyle?)
@@ -578,7 +510,7 @@ end
 --------------------------------------------------------------------------------------------
 local trip: { [string]: any }? = nil
 
--- QA only: with the player attribute TravelPortalHold = "stage", "tunnel" or "arrive" (set from the command bar in a
+-- QA only: with the player attribute TravelPortalHold = "stage", "fall" or "glide" (set from the command bar in a
 -- playtest) the trip pauses at that moment so it can be screenshotted. Never set by the game.
 local function qaHeld(phase: string): boolean
 	return player:GetAttribute("TravelPortalHold") == phase
@@ -627,7 +559,13 @@ local function endTrip(t: { [string]: any })
 	for _, c in t.conns do
 		c:Disconnect()
 	end
-	stopTunnel()
+	stopDrop()
+	for _, d in t.hiddenParts or {} do
+		if d.Parent then
+			d.LocalTransparencyModifier = 0
+		end
+	end
+	t.hiddenParts = nil
 	if t.root then
 		t.root.Anchored = false
 		-- never leave anyone on the stage (it is about to go): back to the destination, or to where they were
@@ -827,19 +765,13 @@ local function play(biome: string)
 		tr:Stop(0.2)
 	end
 
-	-- 3) tunnel
-	startTunnel(color, char, o)
-	cam.FieldOfView = t.fov + 12
-	tween(flash, 0.3, { BackgroundTransparency = 1 })
-	local tunnelStart = os.clock()
+	-- 3) behind the white flash, wait until the server has moved the real character
 	waitFor(t, function()
-		return t.arrived ~= nil and os.clock() - tunnelStart > 1.6
-	end, 5)
-	qaHold(t, "tunnel")
+		return t.arrived ~= nil
+	end, 3)
 	if trip ~= t then
 		return
 	end
-	-- the stage stays (hidden behind the tunnel) until the server has moved us, so nobody falls
 	if t.stage then
 		t.stage:Destroy()
 		t.stage = nil
@@ -853,43 +785,186 @@ local function play(biome: string)
 	end
 	local target = t.arrived :: CFrame
 
-	-- 4) arrival: step out of a small portal behind the character
-	flash.BackgroundColor3 = lighter(color, 0.85)
-	tween(flash, 0.15, { BackgroundTransparency = 0 }).Completed:Wait()
-	if trip ~= t then
-		return
+	-- 4) sky drop onto the island: a copy falls, the real character waits hidden at the arrival point
+	stopDrop()
+	local face = flat(target)
+	local d = face.LookVector
+	local right = face.RightVector
+	local goal = target.Position
+	local startPos = goal - d * DROP_BACK + Vector3.new(0, DROP_H, 0)
+	local f = Instance.new("Folder")
+	f.Name = "TravelSkyDrop"
+	dropFolder = f
+	local copy = fallCopy(char, CFrame.new(startPos) * face, f)
+	local croot = copy and copy:FindFirstChild("HumanoidRootPart") :: BasePart?
+	local rig = if copy then rigOf(copy) else {}
+	pose(rig, 1.45, 0.5) -- spread eagle
+	root.Anchored = true
+	char:PivotTo(CFrame.new(goal) * face)
+	t.hiddenParts = {}
+	for _, x in char:GetDescendants() do
+		if x:IsA("BasePart") or x:IsA("Decal") then
+			table.insert(t.hiddenParts, x)
+		end
 	end
-	stopTunnel()
-	cam.FieldOfView = t.fov
-	local base = CFrame.new(target.Position) * flat(target)
-	local exitPortal = worldPortalAt(target, color, 2.6)
-	t.portal = exitPortal
-	exitPortal.scale = 0.5
-	exitPortal.speed = 2
-	root.Anchored = false
-	char:PivotTo(base * CFrame.new(0, 0, 1.2))
-	hum:MoveTo((base * CFrame.new(0, 0, -5)).Position)
+	-- a few clouds along the way down
+	for i, k in { 0.22, 0.4, 0.55, 0.7 } do
+		local side = if i % 2 == 0 then 1 else -1
+		local c = startPos:Lerp(goal + Vector3.new(0, OPEN_Y * 0.4, 0), k) + right * side * (10 + i * 4) + d * (i * 3)
+		for j = 1, 3 do
+			part({
+				Name = "Cloud", Shape = Enum.PartType.Ball, Material = Enum.Material.SmoothPlastic, Color = Color3.new(1, 1, 1),
+				Transparency = 0.3, Size = Vector3.one * (12 + j * 4),
+				CFrame = CFrame.new(c + right * (j - 2) * 9 + Vector3.new(0, (j % 2) * 3, (j - 2) * 4)), Parent = f,
+			})
+		end
+	end
+	-- wind lines rushing up around the copy
+	local wind, windCfs = {}, {}
+	for i = 1, WIND_N do
+		wind[i] = part({
+			Name = "Wind", Material = Enum.Material.Neon, Color = if i % 3 == 0 then lighter(color, 0.6) else Color3.new(1, 1, 1),
+			Transparency = 0.35, Size = Vector3.new(0.12, 5 + math.random() * 5, 0.12), Parent = f,
+		})
+	end
+	local windA, windR, windO = {}, {}, {}
+	for i = 1, WIND_N do
+		windA[i], windR[i], windO[i] = math.random() * math.pi * 2, 4 + math.random() * 8, math.random() * 50
+	end
+	local chuteModel = Instance.new("Model")
+	chuteModel.Name = "Parachute"
+	local chuteParts, chuteRel, chuteSize = buildChute(color, chuteModel)
+	local chuteCfs = table.create(#chuteParts)
+	local chuteScale, chuteShown, lastScale = 0, false, -1
+	local hinge = Vector3.new(0, 1.6, 0)
+	f.Parent = workspace
+
+	local total = FREE_T + GLIDE_T
+	local function pathAt(tau: number): (Vector3, number)
+		local u = math.clamp(tau / total, 0, 1)
+		local h = 1 - (1 - u) ^ 2
+		local y, sway = 0, 0
+		if tau < FREE_T then
+			local a = tau / FREE_T
+			y = DROP_H - (DROP_H - OPEN_Y) * (0.35 * a + 0.65 * a * a)
+		else
+			local a = math.clamp((tau - FREE_T) / GLIDE_T, 0, 1)
+			y = OPEN_Y * (1 - a) ^ 1.8 + 2.5 * math.sin(math.min(a / 0.22, 1) * math.pi)
+			sway = math.sin(a * math.pi * 2) * 3 * (1 - a)
+		end
+		local p = startPos:Lerp(goal, h)
+		return Vector3.new(p.X, goal.Y + y, p.Z) + right * sway, sway
+	end
+
 	cam.CameraType = Enum.CameraType.Scriptable
-	cam.CFrame = CFrame.lookAt((base * CFrame.new(4.5, 2.2, -12)).Position, (base * CFrame.new(0, 1, 1)).Position)
-	exitPortal.burst(26)
-	tween(flash, 0.35, { BackgroundTransparency = 1 })
-	qaHold(t, "arrive")
-	task.wait(0.6)
+	cam.FieldOfView = t.fov + 16
+	local tau, landT, done = 0, -1, false
+	local camCf: CFrame? = nil
+	local function step(dt: number)
+		if trip ~= t then
+			return
+		end
+		local held = (qaHeld("fall") and tau > 0.6) or (qaHeld("glide") and tau > FREE_T + 0.7)
+		if not held then
+			tau += dt
+		end
+		local pos, sway = pathAt(tau)
+		local gliding = tau >= FREE_T
+		local g = if gliding then smooth((tau - FREE_T) / 0.35) else 0
+		-- body: belly-down and wobbling in free fall, upright under the canopy
+		local wob = 1 - g
+		local yaw = math.sin(tau * 1.4) * 0.35 * wob
+		local roll = math.sin(tau * 2.3) * 0.2 * wob - sway * 0.05
+		local pitch = -1.25 * wob - 0.08 * g
+		local body = CFrame.new(pos) * face * CFrame.Angles(0, yaw, 0)
+		if croot and croot.Parent then
+			croot.CFrame = body * CFrame.Angles(pitch, 0, roll)
+		end
+		-- parachute: opens at FREE_T with a springy pop, folds away on landing
+		if gliding and landT < 0 then
+			if not chuteShown then
+				chuteShown = true
+				chuteModel.Parent = f
+				pose(rig, 2.7, 0.15) -- arms up holding the lines
+			end
+			chuteScale = backOut(math.clamp((tau - FREE_T) / 0.4, 0, 1))
+		elseif landT >= 0 then
+			local a = math.clamp((os.clock() - landT) / 0.35, 0, 1)
+			chuteScale = math.max(1 - a * a, 0.01)
+		end
+		if chuteShown then
+			local s = math.max(chuteScale, 0.01)
+			if s ~= lastScale then
+				lastScale = s
+				for _, p in chuteParts do
+					p.Size = chuteSize[p] * s
+				end
+			end
+			local frame = CFrame.new(pos) * face * CFrame.Angles(0, yaw, 0) * CFrame.Angles(0, 0, -sway * 0.05)
+			for i, p in chuteParts do
+				local r = chuteRel[p]
+				chuteCfs[i] = frame * (CFrame.new(hinge + (r.Position - hinge) * s) * r.Rotation)
+			end
+			workspace:BulkMoveTo(chuteParts, chuteCfs, Enum.BulkMoveMode.FireCFrameChanged)
+		end
+		-- wind: fast in free fall, slow and faint under the canopy
+		local speed = 150 - 110 * g
+		for i, p in wind do
+			local y = -25 + ((windO[i] + tau * speed) % 50)
+			windCfs[i] = CFrame.new(pos + Vector3.new(math.cos(windA[i]) * windR[i], y, math.sin(windA[i]) * windR[i]))
+			p.Transparency = 0.35 + 0.55 * g
+		end
+		workspace:BulkMoveTo(wind, windCfs, Enum.BulkMoveMode.FireCFrameChanged)
+		-- camera above and behind, looking down past the character at the island
+		local eye, look
+		if not gliding then
+			local shake = Vector3.new(math.noise(tau * 8, 1), math.noise(tau * 8, 2), 0) * 0.3
+			eye = pos - d * 14 + Vector3.new(0, 13, 0) + shake
+			look = pos + d * 6 - Vector3.new(0, 10, 0)
+		else
+			local a = smooth((tau - FREE_T) / GLIDE_T)
+			eye = pos - d * (17 - 5 * a) + Vector3.new(0, 8 - 4 * a, 0)
+			look = pos + d * (4 - 4 * a) + Vector3.new(0, -5 + 6.5 * a, 0)
+			cam.FieldOfView = t.fov + 16 - 16 * smooth((tau - FREE_T) / 0.8)
+		end
+		local want = CFrame.lookAt(eye, look)
+		camCf = if camCf then camCf:Lerp(want, 1 - math.exp(-dt * 10)) else want
+		cam.CameraType = Enum.CameraType.Scriptable
+		cam.CFrame = camCf :: CFrame
+		cam.Focus = CFrame.new(pos)
+		-- the real character stays hidden here (the camera scripts may reset the modifier)
+		for _, x in t.hiddenParts or {} do
+			x.LocalTransparencyModifier = 1
+		end
+		-- landing
+		if tau >= total and landT < 0 then
+			landT = os.clock()
+			landPoof(goal, color)
+			pose(rig, 0.1, 0)
+		end
+		if landT >= 0 and os.clock() - landT >= LAND_T then
+			done = true
+		end
+	end
+	RunService:BindToRenderStep("TravelPortalDrop", Enum.RenderPriority.Camera.Value + 2, step)
+	step(0)
+	tween(flash, 0.3, { BackgroundTransparency = 1 })
+	waitFor(t, function()
+		return done
+	end, total + LAND_T + 3)
 	if trip ~= t then
 		return
 	end
-	-- ease back to a normal follow camera, then hand control back
-	local behind = root.CFrame * CFrame.new(0, 3.5, 11)
-	camTo(CFrame.lookAt(behind.Position, root.Position + Vector3.new(0, 1.5, 0)), 0.45).Completed:Wait()
-	if trip ~= t then
-		return
+	-- swap the copy for the real character, standing where it landed
+	RunService:UnbindFromRenderStep("TravelPortalDrop")
+	for _, x in t.hiddenParts or {} do
+		if x.Parent then
+			x.LocalTransparencyModifier = 0
+		end
 	end
-	t.portal = nil
-	exitPortal.speed = 3
-	task.spawn(function()
-		exitPortal.scaleTo(0.01, 0.4, true)
-		exitPortal.destroy()
-	end)
+	t.hiddenParts = nil
+	stopDrop()
+	char:PivotTo(CFrame.new(goal) * face)
 	endTrip(t)
 end
 
@@ -916,7 +991,7 @@ Teleport.OnClientEvent:Connect(function(kind, a, b, c, d)
 		if a == "depart" then
 			worldPortalAt(cf, info.color, 0).play(0.5, 0.9)
 		elseif a == "arrive" then
-			worldPortalAt(cf, info.color, 2.6).play(0.5, 1.1)
+			landPoof(cf.Position, info.color)
 		end
 	end
 end)
